@@ -120,11 +120,11 @@ with get_connection() as conn:
             ROUND(COUNT(*) * 100.0 / NULLIFZERO(SUM(COUNT(*)) OVER()), 1) AS GOAL_PCT
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
         JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
-        WHERE G.GOAL_STATUS IN ('Completed','In Progress','Not Started')
+        WHERE G.GOAL_STATUS IN ('Completed','In Progress','Not Started','Withdrawn')
           AND {build_filter('T')}
         GROUP BY 1
         ORDER BY CASE G.GOAL_STATUS
-            WHEN 'Completed' THEN 1 WHEN 'In Progress' THEN 2 WHEN 'Not Started' THEN 3 END
+            WHEN 'Completed' THEN 1 WHEN 'In Progress' THEN 2 WHEN 'Not Started' THEN 3 WHEN 'Withdrawn' THEN 4 END
     """, conn)
 
     # Section 4: Goal Progression by Domain

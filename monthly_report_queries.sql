@@ -56,12 +56,13 @@ SELECT
     ROUND(COUNT(*) * 100.0
         / NULLIFZERO(SUM(COUNT(*)) OVER()), 1) AS GOAL_PCT
 FROM Carefirst_Sandbox.COACHING_CALL_GOALS
-WHERE GOAL_STATUS IN ('Completed','In Progress','Not Started')
+WHERE GOAL_STATUS IN ('Completed','In Progress','Not Started','Withdrawn')
 GROUP BY 1
 ORDER BY CASE GOAL_STATUS
     WHEN 'Completed' THEN 1
     WHEN 'In Progress' THEN 2
     WHEN 'Not Started' THEN 3
+    WHEN 'Withdrawn' THEN 4
 END;
 
 
