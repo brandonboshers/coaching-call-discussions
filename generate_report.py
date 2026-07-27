@@ -81,14 +81,14 @@ with get_connection() as conn:
     df_engagement = pd.read_sql(f"""
         SELECT
             T.REPORT_TOPIC AS WELLBEING_TOPIC,
-            COUNT(DISTINCT T.GUID) AS MEMBERS,
-            ROUND(COUNT(DISTINCT T.GUID) * 100.0
+            COUNT(DISTINCT T.CURRENTGUID) AS MEMBERS,
+            ROUND(COUNT(DISTINCT T.CURRENTGUID) * 100.0
                 / NULLIFZERO(TOTALS.TOTAL_MEMBERS), 1) AS PCT_OF_MEMBERS,
             COUNT(DISTINCT CASE WHEN G.GOAL_STATUS = 'Completed' THEN G.MEMBERACTION_ID END) AS COMPLETED_GOALS,
             COUNT(DISTINCT CASE WHEN G.GOAL_STATUS IN ('In Progress','Not Started') THEN G.MEMBERACTION_ID END) AS OPEN_IN_PROGRESS_GOALS
         FROM Carefirst_Sandbox.COACHING_CALL_TOPICS T
         CROSS JOIN (
-            SELECT COUNT(DISTINCT GUID) AS TOTAL_MEMBERS
+            SELECT COUNT(DISTINCT CURRENTGUID) AS TOTAL_MEMBERS
             FROM Carefirst_Sandbox.COACHING_CALL_TOPICS
             WHERE {build_filter()}
         ) TOTALS
@@ -119,7 +119,7 @@ with get_connection() as conn:
             COUNT(*) AS COUNT,
             ROUND(COUNT(*) * 100.0 / NULLIFZERO(SUM(COUNT(*)) OVER()), 1) AS GOAL_PCT
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
-        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.GUID = T.GUID
+        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
         WHERE G.GOAL_STATUS IN ('Completed','In Progress','Not Started')
           AND {build_filter('T')}
         GROUP BY 1
@@ -136,7 +136,7 @@ with get_connection() as conn:
             ROUND(SUM(CASE WHEN G.GOAL_STATUS = 'Completed' THEN 1 ELSE 0 END) * 100.0
                 / NULLIFZERO(COUNT(*)), 1) AS COMPLETION_RATE
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
-        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.GUID = T.GUID
+        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
         WHERE {build_filter('T')}
         GROUP BY 1
         ORDER BY CASE G.GOAL_DOMAIN
@@ -150,16 +150,16 @@ with get_connection() as conn:
     # Section 5: Tobacco Coaching Focus
     df_tobacco = pd.read_sql(f"""
         SELECT 'Tobacco Participants' AS METRIC,
-            COUNT(DISTINCT TB.GUID)::VARCHAR AS VALUE
+            COUNT(DISTINCT TB.CURRENTGUID)::VARCHAR AS VALUE
         FROM Carefirst_Sandbox.COACHING_CALL_TOBACCO TB
-        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON TB.GUID = T.GUID
+        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON TB.CURRENTGUID = T.CURRENTGUID
         WHERE {build_filter('T')}
 
         UNION ALL
         SELECT 'Active Tobacco Participants',
-            COUNT(DISTINCT G.GUID)::VARCHAR
+            COUNT(DISTINCT G.CURRENTGUID)::VARCHAR
         FROM Carefirst_Sandbox.COACHING_CALL_TOBACCO TB
-        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON TB.GUID = T.GUID
+        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON TB.CURRENTGUID = T.CURRENTGUID
         JOIN Carefirst_Sandbox.COACHING_CALL_GOALS G
             ON TB.CURRENTGUID = G.CURRENTGUID AND G.GOAL_DOMAIN = 'Tobacco Cessation'
             AND G.GOAL_STATUS IN ('In Progress','Not Started')
@@ -169,7 +169,7 @@ with get_connection() as conn:
         SELECT 'Goals Completed',
             COUNT(*)::VARCHAR
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
-        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.GUID = T.GUID
+        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
         WHERE G.GOAL_DOMAIN = 'Tobacco Cessation' AND G.GOAL_STATUS = 'Completed'
           AND {build_filter('T')}
 
@@ -177,7 +177,7 @@ with get_connection() as conn:
         SELECT 'Goals In Progress',
             COUNT(*)::VARCHAR
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
-        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.GUID = T.GUID
+        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
         WHERE G.GOAL_DOMAIN = 'Tobacco Cessation' AND G.GOAL_STATUS = 'In Progress'
           AND {build_filter('T')}
 
@@ -186,7 +186,7 @@ with get_connection() as conn:
             ROUND(SUM(CASE WHEN G.GOAL_STATUS = 'Completed' THEN 1 ELSE 0 END) * 100.0
                 / NULLIFZERO(COUNT(*)), 1)::VARCHAR || '%'
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
-        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.GUID = T.GUID
+        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
         WHERE G.GOAL_DOMAIN = 'Tobacco Cessation'
           AND G.GOAL_STATUS IN ('Completed','In Progress','Not Started')
           AND {build_filter('T')}
