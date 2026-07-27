@@ -122,15 +122,17 @@ FROM (
             CASE
                 WHEN UPPER(T.RESPONSE_TEXT) LIKE '%WEIGHT%' OR UPPER(T.RESPONSE_TEXT) LIKE '%LBS%'
                     OR UPPER(T.RESPONSE_TEXT) LIKE '%POUND%' OR UPPER(T.RESPONSE_TEXT) LIKE '%BMI%'
-                    THEN 'Weight Loss'
+                    THEN 'Weight Management'
                 WHEN UPPER(T.RESPONSE_TEXT) LIKE '%EXERCIS%' OR UPPER(T.RESPONSE_TEXT) LIKE '%WALK%'
                     OR UPPER(T.RESPONSE_TEXT) LIKE '%RUN %' OR UPPER(T.RESPONSE_TEXT) LIKE '%GYM%'
                     OR UPPER(T.RESPONSE_TEXT) LIKE '%ACTIVE%' OR UPPER(T.RESPONSE_TEXT) LIKE '%STEPS%'
                     THEN 'Exercise'
                 WHEN UPPER(T.RESPONSE_TEXT) LIKE '%STRESS%' OR UPPER(T.RESPONSE_TEXT) LIKE '%ANXI%'
                     OR UPPER(T.RESPONSE_TEXT) LIKE '%DEPRESS%' OR UPPER(T.RESPONSE_TEXT) LIKE '%MENTAL%'
-                    OR UPPER(T.RESPONSE_TEXT) LIKE '%SLEEP%' OR UPPER(T.RESPONSE_TEXT) LIKE '%MINDFUL%'
+                    OR UPPER(T.RESPONSE_TEXT) LIKE '%MINDFUL%'
                     THEN 'Stress Management'
+                WHEN UPPER(T.RESPONSE_TEXT) LIKE '%SLEEP%'
+                    THEN 'Sleep Management'
                 WHEN UPPER(T.RESPONSE_TEXT) LIKE '%EAT%' OR UPPER(T.RESPONSE_TEXT) LIKE '%DIET%'
                     OR UPPER(T.RESPONSE_TEXT) LIKE '%NUTRI%' OR UPPER(T.RESPONSE_TEXT) LIKE '%MEAL%'
                     OR UPPER(T.RESPONSE_TEXT) LIKE '%FOOD%' OR UPPER(T.RESPONSE_TEXT) LIKE '%CALORI%'
@@ -141,7 +143,7 @@ FROM (
                     THEN 'Chronic Disease State'
                 WHEN UPPER(T.RESPONSE_TEXT) LIKE '%TOBACCO%' OR UPPER(T.RESPONSE_TEXT) LIKE '%SMOK%'
                     OR UPPER(T.RESPONSE_TEXT) LIKE '%QUIT%' OR UPPER(T.RESPONSE_TEXT) LIKE '%NICOTINE%'
-                    THEN 'Behavioral Health'
+                    THEN 'Tobacco Cessation'
                 ELSE NULL
             END AS INFERRED_TOPIC,
             CASE WHEN T.QUESTION_ID = '502534' THEN 1 ELSE 2 END AS SRC_PRI
@@ -273,6 +275,23 @@ WHERE UPPER(RAW_TOPIC) = 'TOBACCO'
 -- =========================================================================
 -- SECTION 3: GOALS (SCP.AH_MEMBER_ACTION, current enrollment only)
 -- =========================================================================
+-- GOAL DOMAINS (updated):
+--   Gaps in Care       = screening, vaccines, PCP, preventive care
+--   Exercise           = exercise
+--   Nutrition          = nutrition, healthy eating, diet
+--   Weight Management  = weight, BMI
+--   Tobacco Cessation  = tobacco
+--   Mental/Behavioral Health = stress, depression, mental health, mindfulness, alcohol
+--   Stress Management  = sleep, stress management (standalone)
+--   Condition Management = diabetes, blood pressure, cholesterol, medication adherence,
+--                          appointments, self-management, work items, chronic conditions
+--   Financial          = finances, financial wellness
+--   Social             = social wellness
+--   Spiritual          = spiritual health
+--
+-- GOAL STATUSES:
+--   1 = Not Started, 2 = In Progress, 3 = Completed, 4 = Withdrawn, 5 = Completed
+-- =========================================================================
 DROP TABLE IF EXISTS COACHING_GOALS;
 CREATE LOCAL TEMP TABLE COACHING_GOALS ON COMMIT PRESERVE ROWS AS
 SELECT
@@ -280,28 +299,46 @@ SELECT
     CASE WHEN MA.ActionType_ID = 2 THEN 'Coach-Created'
          WHEN MA.ActionType_ID = 3 THEN 'System-Recommended' END AS GOAL_TYPE,
     CASE
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('EXERCISE','[EXERCISE]','*EXERCISE','[[*EXERCISE]]','*CIS EXERCISE','*CIS EXERICSE','EXERICSE','EXERISE','EXERCSE') THEN 'Physical'
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('WEIGHT','[WEIGHT]','WEIGHT LOSS') THEN 'Physical'
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('HEALTHY EATING','[HEALTHY EATING]','[*HEALTHY EATING]','NUTRTION','HEATLHY EATING','HEALTH EATING','[NUTRITION]','DIET') THEN 'Physical'
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('TOBACCO','[TOBACCO]','ALCOHOL') THEN 'Physical'
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('CHOLESTEROL','CHOL','TRIG','BP','BLOOD PRESSURE') THEN 'Physical'
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('SCREENING','[PREVENTATIVE CARE]','[*PREVENTATIVE CARE]','[*CARE GAPS]','SCREENING SOC','VACCINE','[VACCINE]') THEN 'Physical'
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('DIABETES','[DIABETES]','DIABETES/CAD','CAD/DIABETES','DIABETES SOC','ASTHMA/COPD','ASTHMA','COPD','COPD/HF','[RESPIRATORY (ASTHMA/COPD)]','[ASTHMA/COPD]','[ASTHMA]','[COPD]','CAD/HF','CAD','HF','[CARDIAC (CAD/HF)]','[CAD]','[HF]','AFIB','FIBRO','OA','IBS','IBD','LBP','ARSD') THEN 'Physical'
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('SLEEP','WATER','WATER INTAKE','PAIN MANAGEMENT','CPAP') THEN 'Physical'
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('STRESS','[*STRESS]','STRESS MANAGEMENT','STRESS/EMOTIONAL WELL-BEING','DEPRESSION','MENTAL HEALTH','MINDFULNESS') THEN 'Mental'
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('UTILIZATION RISK','HOSPITAL','[HOSPITALIZATION]','CRITICAL RISK EVENT FOLLOW-UP','APPOINTMENT ADHERENCE','APPOINTMENT','MAKE AND KEEP APPOINTMENTS','MEDICATION ADHERENCE','MEDICATION','MED ADHERENCE','SELF MANAGEMENT','SELF CARE','WORK ITEM','TIME MANAGEMENT','SCHEDULE ADHERENCE') THEN 'Occupational'
+        -- Exercise
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('EXERCISE','[EXERCISE]','*EXERCISE','[[*EXERCISE]]','*CIS EXERCISE','*CIS EXERICSE','EXERICSE','EXERISE','EXERCSE') THEN 'Exercise'
+        -- Nutrition
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('HEALTHY EATING','[HEALTHY EATING]','[*HEALTHY EATING]','NUTRTION','HEATLHY EATING','HEALTH EATING','[NUTRITION]','DIET') THEN 'Nutrition'
+        -- Weight Management
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('WEIGHT','[WEIGHT]','WEIGHT LOSS') THEN 'Weight Management'
+        -- Tobacco Cessation
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('TOBACCO','[TOBACCO]') THEN 'Tobacco Cessation'
+        -- Mental/Behavioral Health (includes alcohol)
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('DEPRESSION','MENTAL HEALTH','MINDFULNESS','ALCOHOL') THEN 'Mental/Behavioral Health'
+        -- Stress Management (sleep, stress)
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('STRESS','[*STRESS]','STRESS MANAGEMENT','STRESS/EMOTIONAL WELL-BEING','SLEEP','CPAP') THEN 'Stress Management'
+        -- Gaps in Care (screening, preventive, vaccines, PCP)
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('SCREENING','[PREVENTATIVE CARE]','[*PREVENTATIVE CARE]','[*CARE GAPS]','SCREENING SOC','VACCINE','[VACCINE]') THEN 'Gaps in Care'
+        -- Condition Management (chronic conditions, medication, appointments, self-management)
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('DIABETES','[DIABETES]','DIABETES/CAD','CAD/DIABETES','DIABETES SOC','ASTHMA/COPD','ASTHMA','COPD','COPD/HF','[RESPIRATORY (ASTHMA/COPD)]','[ASTHMA/COPD]','[ASTHMA]','[COPD]','CAD/HF','CAD','HF','[CARDIAC (CAD/HF)]','[CAD]','[HF]','AFIB','FIBRO','OA','IBS','IBD','LBP','ARSD') THEN 'Condition Management'
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('CHOLESTEROL','CHOL','TRIG','BP','BLOOD PRESSURE') THEN 'Condition Management'
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('UTILIZATION RISK','HOSPITAL','[HOSPITALIZATION]','CRITICAL RISK EVENT FOLLOW-UP','APPOINTMENT ADHERENCE','APPOINTMENT','MAKE AND KEEP APPOINTMENTS','MEDICATION ADHERENCE','MEDICATION','MED ADHERENCE','SELF MANAGEMENT','SELF CARE','WORK ITEM','TIME MANAGEMENT','SCHEDULE ADHERENCE') THEN 'Condition Management'
+        -- Financial
         WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('FINANCES','FINANCIAL WELLNESS','SAVINGS') THEN 'Financial'
+        -- Social
         WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) = 'SOCIAL WELLNESS' THEN 'Social'
+        -- Spiritual
         WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) = 'SPIRITUAL HEALTH' THEN 'Spiritual'
+        -- Remaining physical items that don't fit cleanly elsewhere
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('WATER','WATER INTAKE','PAIN MANAGEMENT') THEN 'Condition Management'
         ELSE 'Other'
     END AS GOAL_DOMAIN,
-    CASE WHEN MA.ActionStatus_ID=2 THEN 'In Progress' WHEN MA.ActionStatus_ID=3 THEN 'Completed' WHEN MA.ActionStatus_ID=4 THEN 'Withdrawn' END AS GOAL_STATUS,
+    CASE
+        WHEN MA.ActionStatus_ID = 1 THEN 'Not Started'
+        WHEN MA.ActionStatus_ID = 2 THEN 'In Progress'
+        WHEN MA.ActionStatus_ID IN (3, 5) THEN 'Completed'
+        WHEN MA.ActionStatus_ID = 4 THEN 'Withdrawn'
+    END AS GOAL_STATUS,
     CASE WHEN MA.Action_Name LIKE '%:%' THEN TRIM(SUBSTR(MA.Action_Name, POSITION(':' IN MA.Action_Name)+1)) ELSE MA.Action_Name END AS GOAL_DESCRIPTION,
     MA.Action_Name AS RAW_ACTION_NAME,
     MA.MemberAction_ID, MA.ActionType_ID, MA.ActionStatus_ID, MA.FocusArea_ID,
     MA.Action_Date AS GOAL_SET_DATE, MA.Close_Date AS GOAL_CLOSE_DATE
 FROM SCP.AH_MEMBER_ACTION MA
-WHERE MA.ActionType_ID IN (2,3) AND MA.ActionStatus_ID IN (2,3,4)
+WHERE MA.ActionType_ID IN (2,3) AND MA.ActionStatus_ID IN (1, 2, 3, 4, 5)
   AND MA.Action_Name NOT LIKE 'Survey:%' AND MA.Action_Name NOT LIKE 'RED:%' AND MA.Action_Name NOT LIKE 'RED/%';
 
 -- =========================================================================
@@ -389,35 +426,41 @@ SELECT GOAL_DOMAIN,
     SUM(CASE WHEN GOAL_TYPE='System-Recommended' THEN 1 ELSE 0 END) AS SYS_RECOMMENDED,
     ROUND(SUM(CASE WHEN GOAL_TYPE='System-Recommended' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS SR_PCT
 FROM COACHING_GOALS_NUMBERED GROUP BY 1
-ORDER BY CASE GOAL_DOMAIN WHEN 'Physical' THEN 1 WHEN 'Mental' THEN 2 WHEN 'Occupational' THEN 3 WHEN 'Social' THEN 4 WHEN 'Financial' THEN 5 WHEN 'Spiritual' THEN 6 ELSE 7 END;
+ORDER BY CASE GOAL_DOMAIN WHEN 'Gaps in Care' THEN 1 WHEN 'Exercise' THEN 2 WHEN 'Nutrition' THEN 3 WHEN 'Weight Management' THEN 4 WHEN 'Tobacco Cessation' THEN 5 WHEN 'Mental/Behavioral Health' THEN 6 WHEN 'Stress Management' THEN 7 WHEN 'Condition Management' THEN 8 WHEN 'Financial' THEN 9 WHEN 'Social' THEN 10 WHEN 'Spiritual' THEN 11 ELSE 12 END;
 
 -- OUTPUT 4: GOAL DOMAIN & STATUS
 SELECT GOAL_DOMAIN,
-    SUM(CASE WHEN GOAL_STATUS='Completed' THEN 1 ELSE 0 END) AS COMPLETED,
-    ROUND(SUM(CASE WHEN GOAL_STATUS='Completed' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS COMP_PCT,
+    SUM(CASE WHEN GOAL_STATUS='Not Started' THEN 1 ELSE 0 END) AS NOT_STARTED,
+    ROUND(SUM(CASE WHEN GOAL_STATUS='Not Started' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS NS_PCT,
     SUM(CASE WHEN GOAL_STATUS='In Progress' THEN 1 ELSE 0 END) AS IN_PROGRESS,
     ROUND(SUM(CASE WHEN GOAL_STATUS='In Progress' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS IP_PCT,
+    SUM(CASE WHEN GOAL_STATUS='Completed' THEN 1 ELSE 0 END) AS COMPLETED,
+    ROUND(SUM(CASE WHEN GOAL_STATUS='Completed' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS COMP_PCT,
     SUM(CASE WHEN GOAL_STATUS='Withdrawn' THEN 1 ELSE 0 END) AS WITHDRAWN,
     ROUND(SUM(CASE WHEN GOAL_STATUS='Withdrawn' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS WD_PCT
 FROM COACHING_GOALS_NUMBERED GROUP BY 1
-ORDER BY CASE GOAL_DOMAIN WHEN 'Physical' THEN 1 WHEN 'Mental' THEN 2 WHEN 'Occupational' THEN 3 WHEN 'Social' THEN 4 WHEN 'Financial' THEN 5 WHEN 'Spiritual' THEN 6 ELSE 7 END;
+ORDER BY CASE GOAL_DOMAIN WHEN 'Gaps in Care' THEN 1 WHEN 'Exercise' THEN 2 WHEN 'Nutrition' THEN 3 WHEN 'Weight Management' THEN 4 WHEN 'Tobacco Cessation' THEN 5 WHEN 'Mental/Behavioral Health' THEN 6 WHEN 'Stress Management' THEN 7 WHEN 'Condition Management' THEN 8 WHEN 'Financial' THEN 9 WHEN 'Social' THEN 10 WHEN 'Spiritual' THEN 11 ELSE 12 END;
 
 -- OUTPUT 5: GOAL NUMBER & STATUS
 SELECT GOAL_NUMBER,
+    SUM(CASE WHEN GOAL_STATUS='Not Started' THEN 1 ELSE 0 END) AS NOT_STARTED,
+    ROUND(SUM(CASE WHEN GOAL_STATUS='Not Started' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS NS_PCT,
+    SUM(CASE WHEN GOAL_STATUS='In Progress' THEN 1 ELSE 0 END) AS IN_PROGRESS,
+    ROUND(SUM(CASE WHEN GOAL_STATUS='In Progress' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS IP_PCT,
     SUM(CASE WHEN GOAL_STATUS='Completed' THEN 1 ELSE 0 END) AS COMPLETED,
     ROUND(SUM(CASE WHEN GOAL_STATUS='Completed' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS COMP_PCT,
     SUM(CASE WHEN GOAL_STATUS='Withdrawn' THEN 1 ELSE 0 END) AS WITHDRAWN,
-    ROUND(SUM(CASE WHEN GOAL_STATUS='Withdrawn' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS WD_PCT,
-    SUM(CASE WHEN GOAL_STATUS='In Progress' THEN 1 ELSE 0 END) AS IN_PROGRESS,
-    ROUND(SUM(CASE WHEN GOAL_STATUS='In Progress' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS IP_PCT
+    ROUND(SUM(CASE WHEN GOAL_STATUS='Withdrawn' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS WD_PCT
 FROM COACHING_GOALS_NUMBERED WHERE GOAL_NUMBER <= 6 GROUP BY 1 ORDER BY 1;
 
 -- OUTPUT 6: GOAL TYPE & STATUS
 SELECT GOAL_TYPE,
-    SUM(CASE WHEN GOAL_STATUS='Completed' THEN 1 ELSE 0 END) AS COMPLETED,
-    ROUND(SUM(CASE WHEN GOAL_STATUS='Completed' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS COMP_PCT,
+    SUM(CASE WHEN GOAL_STATUS='Not Started' THEN 1 ELSE 0 END) AS NOT_STARTED,
+    ROUND(SUM(CASE WHEN GOAL_STATUS='Not Started' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS NS_PCT,
     SUM(CASE WHEN GOAL_STATUS='In Progress' THEN 1 ELSE 0 END) AS IN_PROGRESS,
     ROUND(SUM(CASE WHEN GOAL_STATUS='In Progress' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS IP_PCT,
+    SUM(CASE WHEN GOAL_STATUS='Completed' THEN 1 ELSE 0 END) AS COMPLETED,
+    ROUND(SUM(CASE WHEN GOAL_STATUS='Completed' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS COMP_PCT,
     SUM(CASE WHEN GOAL_STATUS='Withdrawn' THEN 1 ELSE 0 END) AS WITHDRAWN,
     ROUND(SUM(CASE WHEN GOAL_STATUS='Withdrawn' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),2) AS WD_PCT
 FROM COACHING_GOALS_NUMBERED GROUP BY 1 ORDER BY 1;
