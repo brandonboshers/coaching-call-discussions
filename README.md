@@ -269,33 +269,40 @@ The original report spec references Achievement/Habit/Learning as goal types. Th
 
 ## How to Run
 
-### Automated (weekly refresh to Vertica)
+### Automated (monthly refresh to Vertica)
 
-The pipeline runs every Monday at 6 AM via launchd. It rebuilds the data from scratch and writes to `CAREFIRST_SANDBOX`:
+The pipeline runs on the **1st of each month at 6 AM** via launchd (local) or Airflow (production). It rebuilds the data from scratch and writes to `Carefirst_Sandbox`:
 
 | Table | Contents |
 |-------|----------|
-| `CAREFIRST_SANDBOX.COACHING_CALL_TOPICS` | One row per member per call date — topic, tier source, call type |
-| `CAREFIRST_SANDBOX.COACHING_CALL_GOALS` | One row per goal — domain, type, status, goal number |
-| `CAREFIRST_SANDBOX.COACHING_CALL_TOBACCO` | One row per member flagged for tobacco discussion |
+| `Carefirst_Sandbox.COACHING_CALL_TOPICS` | One row per member per call date — topic, tier source, call type |
+| `Carefirst_Sandbox.COACHING_CALL_GOALS` | One row per goal — domain, type, status, goal number |
+| `Carefirst_Sandbox.COACHING_CALL_TOBACCO` | One row per member flagged for tobacco discussion |
 
-All tables include a `REFRESH_TIMESTAMP` column showing when the data was last rebuilt.
+All tables include a `REFRESH_DATE` column showing when the data was last rebuilt.
 
 ```bash
 # Manual trigger
 python3 weekly_refresh.py
 
-# Single customer
-python3 weekly_refresh.py HP_SCCareFirst
-
-# Customer + date range
-python3 weekly_refresh.py HP_SCCareFirst 2025-01-01 2025-06-30
-
 # Via launchd
-launchctl start com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions
+launchctl start com.sharecare.ETL_Monthly_1st6am_CoachingDiscussions
 ```
 
-Log: `~/Library/Logs/coaching-call-discussions.log`
+Log: `~/Library/Logs/coaching-discussions.log`
+
+### Airflow deployment
+
+The same `weekly_refresh.py` can be called from an Airflow DAG:
+
+```python
+from coaching_call_discussions.weekly_refresh import main
+
+# In a PythonOperator:
+task = PythonOperator(task_id='coaching_discussions_refresh', python_callable=main)
+```
+
+Or as a BashOperator pointing to the script. Connection is handled via `VERTICA_*` env vars (see `.env.example`) when the shared `db_connect.py` helper is not available.
 
 ### Excel export (ad-hoc formatted report)
 ```bash
@@ -326,17 +333,17 @@ Run the entire `coaching_call_topics_goals.sql` file in a Vertica session. Add f
 
 | Label | Schedule | Log |
 |-------|----------|-----|
-| `com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions` | Mondays 6:00 AM | `~/Library/Logs/coaching-call-discussions.log` |
+| `com.sharecare.ETL_Monthly_1st6am_CoachingDiscussions` | 1st of month, 6:00 AM | `~/Library/Logs/coaching-discussions.log` |
 
 ### Install/reload
 ```bash
-cp com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions.plist ~/Library/LaunchAgents/
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions.plist
+cp com.sharecare.ETL_Monthly_1st6am_CoachingDiscussions.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.sharecare.ETL_Monthly_1st6am_CoachingDiscussions.plist
 ```
 
 ### Disable
 ```bash
-launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions.plist
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.sharecare.ETL_Monthly_1st6am_CoachingDiscussions.plist
 ```
 
 ---
@@ -370,12 +377,15 @@ launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.sharecare.ETL_Weekly_M
 
 | File | Purpose |
 |------|---------|
-| `coaching_call_topics_goals.sql` | Complete SQL query (source of truth) |
-| `weekly_refresh.py` | Automated pipeline — runs SQL and persists to CAREFIRST_SANDBOX |
-| `run_report.py` | Ad-hoc — runs SQL and exports formatted Excel |
+| `coaching_call_topics_goals.sql` | Interactive SQL query with output SELECTs (for DbVisualizer / ad-hoc) |
+| `weekly_refresh.sql` | Pipeline SQL — same logic but ends with TRUNCATE+INSERT to Vertica |
+| `weekly_refresh.py` | Automated pipeline — executes SQL, logs progress, persists to Carefirst_Sandbox |
+| `run_report.py` | Ad-hoc — runs interactive SQL and exports formatted Excel |
+| `ddl_create_tables.sql` | One-time DDL to create the 3 persistent tables |
 | `run_coaching_refresh.sh` | Shell wrapper for launchd |
-| `com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions.plist` | launchd schedule (Mondays 6 AM) |
-| `.env.example` | Template showing credential setup |
+| `com.sharecare.ETL_Monthly_1st6am_CoachingDiscussions.plist` | launchd schedule (1st of month, 6 AM) |
+| `.env.example` | Template showing credential env vars (for Airflow / non-local) |
+| `requirements.txt` | Python dependencies |
 | `README.md` | This documentation |
 | `.gitignore` | Excludes .xlsx, .log, .env, __pycache__ |
 

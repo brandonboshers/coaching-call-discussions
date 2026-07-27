@@ -1,4 +1,8 @@
 *.xlsx
+.env
+*.log
+__pycache__/
+.ipynb_checkpoints/
 *.log
 .env
 __pycache__/
