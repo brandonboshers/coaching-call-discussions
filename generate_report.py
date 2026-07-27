@@ -26,7 +26,7 @@ from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 # --- Config ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_PATH = os.path.join(SCRIPT_DIR, 'template.pptx')
-DEFAULT_CUSTOMER = 'HP_SCCareFirst'
+DEFAULT_CUSTOMER = 'HP_SCCAREFIRST'
 
 # Brand colors
 COLOR_PRIMARY = RGBColor(0x00, 0x4D, 0x3D)    # Dark teal
@@ -65,7 +65,7 @@ def build_filter(table_alias='', date_col='CALL_DATE'):
     """Build WHERE clause fragments for customer and date filtering."""
     parts = []
     prefix = f"{table_alias}." if table_alias else ""
-    parts.append(f"{prefix}CUSTOMERID = '{customer_id}'")
+    parts.append(f"UPPER({prefix}CUSTOMERID) = UPPER('{customer_id}')")
     if date_col:
         parts.append(f"{prefix}{date_col} >= '{start_date}'")
         parts.append(f"{prefix}{date_col} <= '{end_date}'")
