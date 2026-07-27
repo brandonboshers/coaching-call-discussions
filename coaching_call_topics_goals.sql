@@ -309,10 +309,10 @@ SELECT
         WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('WEIGHT','[WEIGHT]','WEIGHT LOSS') THEN 'Weight Management'
         -- Tobacco Cessation
         WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('TOBACCO','[TOBACCO]') THEN 'Tobacco Cessation'
-        -- Mental/Behavioral Health (includes alcohol)
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('DEPRESSION','MENTAL HEALTH','MINDFULNESS','ALCOHOL') THEN 'Mental/Behavioral Health'
-        -- Stress Management (sleep, stress)
-        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('STRESS','[*STRESS]','STRESS MANAGEMENT','STRESS/EMOTIONAL WELL-BEING','SLEEP','CPAP') THEN 'Stress Management'
+        -- Mental/Behavioral Health (stress, depression, mental health, mindfulness, alcohol)
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('STRESS','[*STRESS]','STRESS/EMOTIONAL WELL-BEING','DEPRESSION','MENTAL HEALTH','MINDFULNESS','ALCOHOL') THEN 'Mental/Behavioral Health'
+        -- Stress Management (sleep, stress management as explicit goal name)
+        WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('STRESS MANAGEMENT','SLEEP','CPAP') THEN 'Stress Management'
         -- Gaps in Care (screening, preventive, vaccines, PCP)
         WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('SCREENING','[PREVENTATIVE CARE]','[*PREVENTATIVE CARE]','[*CARE GAPS]','SCREENING SOC','VACCINE','[VACCINE]') THEN 'Gaps in Care'
         -- Condition Management (chronic conditions, medication, appointments, self-management)

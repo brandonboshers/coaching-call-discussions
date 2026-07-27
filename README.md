@@ -161,8 +161,8 @@ Goals come from the coaching platform's formal goal system (`SCP.AH_MEMBER_ACTIO
 | Nutrition | Nutrition, healthy eating, diet |
 | Weight Management | Weight, BMI, weight loss |
 | Tobacco Cessation | Tobacco |
-| Mental/Behavioral Health | Depression, mental health, mindfulness, alcohol |
-| Stress Management | Stress, sleep, CPAP |
+| Mental/Behavioral Health | Stress, depression, mental health, mindfulness, alcohol |
+| Stress Management | Sleep, stress management (explicit goal name), CPAP |
 | Condition Management | Diabetes, blood pressure, cholesterol, asthma, COPD, CAD, HF, medication adherence, appointments, self-management, work items |
 | Financial | Finances, financial wellness |
 | Social | Social wellness |
