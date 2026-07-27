@@ -97,7 +97,8 @@ Two versions of the topic form exist. Both map to the same report categories:
 | Weight | *(not available)* | **Weight Management** |
 | Stress | Mental well-being | **Stress Management** |
 | *(not available)* | Restorative sleep | **Sleep Management** |
-| Tobacco | Avoidance of risky substances | **Tobacco Cessation** |
+| Tobacco | *(not available)* | **Tobacco Cessation** |
+| *(not available)* | Avoidance of risky substances | **Behavioral Health** |
 | *(not available)* | Positive social connections | **Social Support** |
 | Other - physical/social | *(not available)* | **Social Support** |
 | Other | *(not available)* | **Other** |
