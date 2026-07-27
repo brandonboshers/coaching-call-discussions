@@ -1,9 +1,10 @@
 -- =========================================================================
 -- COACHING CALL DISCUSSIONS: MONTHLY REFRESH
 -- =========================================================================
--- Builds all intermediate temp tables, then truncates and reloads the
--- persistent Carefirst_Sandbox tables. Designed for unattended execution
--- via Airflow or local launchd (1st of each month).
+-- Builds all intermediate temp tables, then loads the persistent
+-- Carefirst_Sandbox tables for the current month. Historical months
+-- are preserved (DELETE + INSERT keyed on REPORT_MONTH).
+-- Re-running in the same month is idempotent.
 --
 -- Target tables (created by ddl_create_tables.sql):
 --   Carefirst_Sandbox.COACHING_CALL_TOPICS
@@ -315,33 +316,43 @@ JOIN (
 
 
 -- =========================================================================
--- STEP 5: LOAD PERSISTENT TABLES (truncate + insert)
+-- STEP 5: LOAD PERSISTENT TABLES (delete current month + insert)
+-- Uses REPORT_MONTH = 'YYYY-MM' to partition data by run month.
+-- Re-running for the same month is idempotent (deletes then reinserts).
+-- Historical months are preserved.
 -- =========================================================================
 
 -- 5A: COACHING_CALL_TOPICS
-TRUNCATE TABLE Carefirst_Sandbox.COACHING_CALL_TOPICS;
+DELETE FROM Carefirst_Sandbox.COACHING_CALL_TOPICS
+WHERE REPORT_MONTH = TO_CHAR(SYSDATE, 'YYYY-MM');
+
 INSERT INTO Carefirst_Sandbox.COACHING_CALL_TOPICS
-    (ACCOUNT, GUID, CUSTOMERID, CALL_DATE, CALL_TYPE, RAW_TOPIC, REPORT_TOPIC, TOPIC_SOURCE, PROGRAM_TYPE, REFRESH_DATE)
+    (REPORT_MONTH, ACCOUNT, GUID, CUSTOMERID, CALL_DATE, CALL_TYPE, RAW_TOPIC, REPORT_TOPIC, TOPIC_SOURCE, PROGRAM_TYPE, REFRESH_DATE)
 SELECT
-    ACCOUNT, GUID, CUSTOMERID, CALL_DATE, CALL_TYPE, RAW_TOPIC, REPORT_TOPIC, TOPIC_SOURCE, PROGRAM_TYPE, SYSDATE
+    TO_CHAR(SYSDATE, 'YYYY-MM'), ACCOUNT, GUID, CUSTOMERID, CALL_DATE, CALL_TYPE, RAW_TOPIC, REPORT_TOPIC, TOPIC_SOURCE, PROGRAM_TYPE, SYSDATE
 FROM COACHING_TOPICS;
 
 -- 5B: COACHING_CALL_TOBACCO
-TRUNCATE TABLE Carefirst_Sandbox.COACHING_CALL_TOBACCO;
+DELETE FROM Carefirst_Sandbox.COACHING_CALL_TOBACCO
+WHERE REPORT_MONTH = TO_CHAR(SYSDATE, 'YYYY-MM');
+
 INSERT INTO Carefirst_Sandbox.COACHING_CALL_TOBACCO
-    (ACCOUNT, GUID, TOBACCO_DISCUSSED, REFRESH_DATE)
+    (REPORT_MONTH, ACCOUNT, GUID, TOBACCO_DISCUSSED, REFRESH_DATE)
 SELECT
-    ACCOUNT, GUID, TOBACCO_DISCUSSED, SYSDATE
+    TO_CHAR(SYSDATE, 'YYYY-MM'), ACCOUNT, GUID, TOBACCO_DISCUSSED, SYSDATE
 FROM COACHING_TOBACCO;
 
 -- 5C: COACHING_CALL_GOALS
-TRUNCATE TABLE Carefirst_Sandbox.COACHING_CALL_GOALS;
+DELETE FROM Carefirst_Sandbox.COACHING_CALL_GOALS
+WHERE REPORT_MONTH = TO_CHAR(SYSDATE, 'YYYY-MM');
+
 INSERT INTO Carefirst_Sandbox.COACHING_CALL_GOALS
-    (ACCOUNT, GOAL_TYPE, GOAL_DOMAIN, GOAL_STATUS, GOAL_DESCRIPTION, RAW_ACTION_NAME,
+    (REPORT_MONTH, ACCOUNT, GOAL_TYPE, GOAL_DOMAIN, GOAL_STATUS, GOAL_DESCRIPTION, RAW_ACTION_NAME,
      MEMBERACTION_ID, ACTIONTYPE_ID, ACTIONSTATUS_ID, FOCUSAREA_ID,
      GOAL_SET_DATE, GOAL_CLOSE_DATE, CURRENTGUID, GUID, GOAL_NUMBER, REFRESH_DATE)
 SELECT
-    ACCOUNT, GOAL_TYPE, GOAL_DOMAIN, GOAL_STATUS, GOAL_DESCRIPTION, RAW_ACTION_NAME,
+    TO_CHAR(SYSDATE, 'YYYY-MM'), ACCOUNT, GOAL_TYPE, GOAL_DOMAIN, GOAL_STATUS, GOAL_DESCRIPTION, RAW_ACTION_NAME,
     MEMBERACTION_ID, ACTIONTYPE_ID, ACTIONSTATUS_ID, FOCUSAREA_ID,
     GOAL_SET_DATE, GOAL_CLOSE_DATE, CURRENTGUID, GUID, GOAL_NUMBER, SYSDATE
 FROM COACHING_GOALS_NUMBERED;
+
