@@ -117,8 +117,8 @@ FROM (
             T.ACCOUNT,
             TRUNC(T.RESPONSE_DATE)::DATE AS TOPIC_DATE,
             -- Keyword classification. Order matters: more specific matches first.
-            -- "walking to lose weight" -> Weight Loss (not Exercise)
-            -- "quit smoking" -> Behavioral Health (not caught by Exercise "quit")
+            -- "walking to lose weight" -> Weight Management (not Exercise)
+            -- "quit smoking" -> Tobacco Cessation (not caught by Exercise "quit")
             CASE
                 WHEN UPPER(T.RESPONSE_TEXT) LIKE '%WEIGHT%' OR UPPER(T.RESPONSE_TEXT) LIKE '%LBS%'
                     OR UPPER(T.RESPONSE_TEXT) LIKE '%POUND%' OR UPPER(T.RESPONSE_TEXT) LIKE '%BMI%'
@@ -215,30 +215,31 @@ SELECT
     CASE
         WHEN UPPER(LM.RESPONSE_TEXT) = 'EXERCISE'                  THEN 'Exercise'
         WHEN UPPER(LM.RESPONSE_TEXT) = 'HEALTHY EATING'            THEN 'Nutrition'
-        WHEN UPPER(LM.RESPONSE_TEXT) = 'WEIGHT'                    THEN 'Weight Loss'
+        WHEN UPPER(LM.RESPONSE_TEXT) = 'WEIGHT'                    THEN 'Weight Management'
         WHEN UPPER(LM.RESPONSE_TEXT) = 'STRESS'                    THEN 'Stress Management'
-        WHEN UPPER(LM.RESPONSE_TEXT) = 'TOBACCO'                   THEN 'Behavioral Health'
+        WHEN UPPER(LM.RESPONSE_TEXT) = 'TOBACCO'                   THEN 'Tobacco Cessation'
         WHEN UPPER(LM.RESPONSE_TEXT) = 'OTHER'                     THEN 'Other'
         WHEN UPPER(LM.RESPONSE_TEXT) = 'OTHER - PHYSICAL/SOCIAL'   THEN 'Social Support'
         WHEN UPPER(LM.RESPONSE_TEXT) = 'PHYSICAL ACTIVITY'             THEN 'Exercise'
         WHEN UPPER(LM.RESPONSE_TEXT) = 'NUTRITION/WEIGHT MANAGEMENT'   THEN 'Nutrition'
         WHEN UPPER(LM.RESPONSE_TEXT) = 'MENTAL WELL-BEING'             THEN 'Stress Management'
-        WHEN UPPER(LM.RESPONSE_TEXT) = 'RESTORATIVE SLEEP'             THEN 'Stress Management'
+        WHEN UPPER(LM.RESPONSE_TEXT) = 'RESTORATIVE SLEEP'             THEN 'Sleep Management'
         WHEN UPPER(LM.RESPONSE_TEXT) = 'POSITIVE SOCIAL CONNECTIONS'   THEN 'Social Support'
-        WHEN UPPER(LM.RESPONSE_TEXT) = 'AVOIDANCE OF RISKY SUBSTANCES' THEN 'Behavioral Health'
+        WHEN UPPER(LM.RESPONSE_TEXT) = 'AVOIDANCE OF RISKY SUBSTANCES' THEN 'Tobacco Cessation'
         WHEN DM.RESPONSE_TEXT IS NOT NULL       THEN 'Chronic Disease State'
         WHEN GT.INFERRED_TOPIC IS NOT NULL      THEN GT.INFERRED_TOPIC
         -- TIER 2: CALL TYPE INFERENCE
-        WHEN UPPER(TRIM(C.CALL_TYPE)) = 'TOBACCO'          THEN 'Behavioral Health'
+        WHEN UPPER(TRIM(C.CALL_TYPE)) = 'TOBACCO'          THEN 'Tobacco Cessation'
         WHEN UPPER(TRIM(C.CALL_TYPE)) = 'DIETARY REFERRAL' THEN 'Nutrition'
         WHEN UPPER(TRIM(C.CALL_TYPE)) IN ('SPECIALTY','CLINICAL') THEN 'Chronic Disease State'
         WHEN PT.PRIOR_RESPONSE_TEXT IS NOT NULL THEN
             CASE
                 WHEN UPPER(PT.PRIOR_RESPONSE_TEXT) IN ('EXERCISE','PHYSICAL ACTIVITY') THEN 'Exercise'
                 WHEN UPPER(PT.PRIOR_RESPONSE_TEXT) IN ('HEALTHY EATING','NUTRITION/WEIGHT MANAGEMENT') THEN 'Nutrition'
-                WHEN UPPER(PT.PRIOR_RESPONSE_TEXT) = 'WEIGHT' THEN 'Weight Loss'
-                WHEN UPPER(PT.PRIOR_RESPONSE_TEXT) IN ('STRESS','MENTAL WELL-BEING','RESTORATIVE SLEEP') THEN 'Stress Management'
-                WHEN UPPER(PT.PRIOR_RESPONSE_TEXT) IN ('TOBACCO','AVOIDANCE OF RISKY SUBSTANCES') THEN 'Behavioral Health'
+                WHEN UPPER(PT.PRIOR_RESPONSE_TEXT) = 'WEIGHT' THEN 'Weight Management'
+                WHEN UPPER(PT.PRIOR_RESPONSE_TEXT) IN ('STRESS','MENTAL WELL-BEING') THEN 'Stress Management'
+                WHEN UPPER(PT.PRIOR_RESPONSE_TEXT) = 'RESTORATIVE SLEEP' THEN 'Sleep Management'
+                WHEN UPPER(PT.PRIOR_RESPONSE_TEXT) IN ('TOBACCO','AVOIDANCE OF RISKY SUBSTANCES') THEN 'Tobacco Cessation'
                 WHEN UPPER(PT.PRIOR_RESPONSE_TEXT) IN ('POSITIVE SOCIAL CONNECTIONS','OTHER - PHYSICAL/SOCIAL') THEN 'Social Support'
                 WHEN UPPER(PT.PRIOR_RESPONSE_TEXT) = 'OTHER' THEN 'Other'
                 ELSE 'General'

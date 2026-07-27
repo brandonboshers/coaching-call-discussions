@@ -63,7 +63,7 @@ Sources: Question 502534 (topic details), 502833 (long-term goal), 502616 (DM go
 
 The call type itself tells us the topic:
 
-- Tobacco call --> Behavioral Health
+- Tobacco call --> Tobacco Cessation
 - Dietary Referral call --> Nutrition
 - Specialty call --> Chronic Disease State
 - Clinical call --> Chronic Disease State
@@ -94,10 +94,10 @@ Two versions of the topic form exist. Both map to the same report categories:
 |-------------------------------------|-------------------------------------|-----------------|
 | Exercise | Physical activity | **Exercise** |
 | Healthy Eating | Nutrition/Weight management | **Nutrition** |
-| Weight | *(not available)* | **Weight Loss** |
+| Weight | *(not available)* | **Weight Management** |
 | Stress | Mental well-being | **Stress Management** |
-| *(not available)* | Restorative sleep | **Stress Management** |
-| Tobacco | Avoidance of risky substances | **Behavioral Health** |
+| *(not available)* | Restorative sleep | **Sleep Management** |
+| Tobacco | Avoidance of risky substances | **Tobacco Cessation** |
 | *(not available)* | Positive social connections | **Social Support** |
 | Other - physical/social | *(not available)* | **Social Support** |
 | Other | *(not available)* | **Other** |
@@ -110,21 +110,22 @@ When the topic form wasn't filled out but the coach wrote notes on that date, we
 
 | Keywords Found | Report Category |
 |----------------|-----------------|
-| weight, lbs, pound, BMI | **Weight Loss** |
+| weight, lbs, pound, BMI | **Weight Management** |
 | exercise, walk, run, gym, active, steps | **Exercise** |
-| stress, anxiety, depression, mental, sleep, mindful | **Stress Management** |
+| stress, anxiety, depression, mental, mindful | **Stress Management** |
+| sleep | **Sleep Management** |
 | eat, diet, nutrition, meal, food, calorie | **Nutrition** |
 | cholesterol, A1C, blood pressure, diabetes, asthma, COPD | **Chronic Disease State** |
-| tobacco, smoking, quit, nicotine | **Behavioral Health** |
+| tobacco, smoking, quit, nicotine | **Tobacco Cessation** |
 | *(none of the above)* | *(skip — let Tier 2/3/4 handle)* |
 
-Note: "quit" only triggers Behavioral Health because it's evaluated AFTER the exercise/nutrition keywords. A note saying "quit eating junk food" would match "eat" first and become Nutrition.
+Note: "quit" only triggers Tobacco Cessation because it's evaluated AFTER the exercise/nutrition keywords. A note saying "quit eating junk food" would match "eat" first and become Nutrition.
 
 ### Tier 2 Mapping (Call type inference)
 
 | Call Type | Report Category |
 |-----------|-----------------|
-| Tobacco | **Behavioral Health** |
+| Tobacco | **Tobacco Cessation** |
 | Dietary Referral | **Nutrition** |
 | Specialty | **Chronic Disease State** |
 | Clinical | **Chronic Disease State** |
@@ -187,7 +188,7 @@ A member is flagged "Yes" for tobacco if they ever had:
 - "Tobacco" explicitly selected as their topic (question 502533), OR
 - A call with call type "Tobacco"
 
-This does NOT include members who discussed alcohol or marijuana (those fall under Behavioral Health but are not tobacco-specific).
+This does NOT include members who discussed alcohol or marijuana (those fall under Mental/Behavioral Health but are not tobacco-specific).
 
 ---
 
