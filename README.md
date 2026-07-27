@@ -269,7 +269,35 @@ The original report spec references Achievement/Habit/Learning as goal types. Th
 
 ## How to Run
 
-### Python (recommended — produces formatted Excel)
+### Automated (weekly refresh to Vertica)
+
+The pipeline runs every Monday at 6 AM via launchd. It rebuilds the data from scratch and writes to `CAREFIRST_SANDBOX`:
+
+| Table | Contents |
+|-------|----------|
+| `CAREFIRST_SANDBOX.COACHING_CALL_TOPICS` | One row per member per call date — topic, tier source, call type |
+| `CAREFIRST_SANDBOX.COACHING_CALL_GOALS` | One row per goal — domain, type, status, goal number |
+| `CAREFIRST_SANDBOX.COACHING_CALL_TOBACCO` | One row per member flagged for tobacco discussion |
+
+All tables include a `REFRESH_TIMESTAMP` column showing when the data was last rebuilt.
+
+```bash
+# Manual trigger
+python3 weekly_refresh.py
+
+# Single customer
+python3 weekly_refresh.py HP_SCCareFirst
+
+# Customer + date range
+python3 weekly_refresh.py HP_SCCareFirst 2025-01-01 2025-06-30
+
+# Via launchd
+launchctl start com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions
+```
+
+Log: `~/Library/Logs/coaching-call-discussions.log`
+
+### Excel export (ad-hoc formatted report)
 ```bash
 # All customers, all dates
 python3 run_report.py
@@ -290,6 +318,25 @@ Run the entire `coaching_call_topics_goals.sql` file in a Vertica session. Add f
       AND UPPER(MC.DIRECTION) = 'OUTBOUND'
       AND MC.CUSTOMERID = 'ER_SHBP'                        -- customer filter
       AND TRUNC(MC.ENCOUNTERDATETIME)::DATE >= '2024-01-01' -- date filter
+```
+
+---
+
+## Scheduling
+
+| Label | Schedule | Log |
+|-------|----------|-----|
+| `com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions` | Mondays 6:00 AM | `~/Library/Logs/coaching-call-discussions.log` |
+
+### Install/reload
+```bash
+cp com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions.plist
+```
+
+### Disable
+```bash
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions.plist
 ```
 
 ---
@@ -324,9 +371,13 @@ Run the entire `coaching_call_topics_goals.sql` file in a Vertica session. Add f
 | File | Purpose |
 |------|---------|
 | `coaching_call_topics_goals.sql` | Complete SQL query (source of truth) |
-| `run_report.py` | Runs the SQL and exports a single-sheet Excel matching the report layout |
+| `weekly_refresh.py` | Automated pipeline — runs SQL and persists to CAREFIRST_SANDBOX |
+| `run_report.py` | Ad-hoc — runs SQL and exports formatted Excel |
+| `run_coaching_refresh.sh` | Shell wrapper for launchd |
+| `com.sharecare.ETL_Weekly_Mon6am_Coaching_Discussions.plist` | launchd schedule (Mondays 6 AM) |
+| `.env.example` | Template showing credential setup |
 | `README.md` | This documentation |
-| `.gitignore` | Excludes generated .xlsx files from git |
+| `.gitignore` | Excludes .xlsx, .log, .env, __pycache__ |
 
 ---
 
