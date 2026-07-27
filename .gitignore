@@ -1,4 +1,5 @@
 *.xlsx
+coaching_report_*.pptx
 .env
 *.log
 __pycache__/
