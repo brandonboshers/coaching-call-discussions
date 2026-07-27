@@ -133,14 +133,14 @@ next_row = write_section(ws, row, 1, 'Goal Type & Domain', dfs['Goal Type & Doma
 
 row = next_row
 write_section(ws, row, 1, 'Goal Number & Status', dfs['Goal Number & Status'])
-write_section(ws, row, 9, 'Goal Type & Status', dfs['Goal Type & Status'])
-next_row = write_section(ws, row, 17, 'Goal Domains & Status', dfs['Goal Domain & Status'])
+write_section(ws, row, 11, 'Goal Type & Status', dfs['Goal Type & Status'])
+next_row = write_section(ws, row, 21, 'Goal Domains & Status', dfs['Goal Domain & Status'])
 
 row = next_row
 write_section(ws, row, 1, 'Topic Source Breakdown', dfs['Tier Breakdown'])
 
 # Column widths
-for col in range(1, 25):
+for col in range(1, 32):
     ws.column_dimensions[get_column_letter(col)].width = 14
 
 wb.save(output_path)

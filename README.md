@@ -154,20 +154,26 @@ Goals come from the coaching platform's formal goal system (`SCP.AH_MEMBER_ACTIO
 
 | Domain | Examples |
 |--------|----------|
-| Physical | Exercise, weight, nutrition, tobacco, alcohol, screening, diabetes, blood pressure, sleep |
-| Mental | Stress, depression, mental health, mindfulness |
-| Occupational | Appointments, medication adherence, work items, self-management |
+| Gaps in Care | Screening, vaccines, PCP, preventive care |
+| Exercise | Exercise |
+| Nutrition | Nutrition, healthy eating, diet |
+| Weight Management | Weight, BMI, weight loss |
+| Tobacco Cessation | Tobacco |
+| Mental/Behavioral Health | Depression, mental health, mindfulness, alcohol |
+| Stress Management | Stress, sleep, CPAP |
+| Condition Management | Diabetes, blood pressure, cholesterol, asthma, COPD, CAD, HF, medication adherence, appointments, self-management, work items |
 | Financial | Finances, financial wellness |
 | Social | Social wellness |
 | Spiritual | Spiritual health |
 
 ### Goal Status
 
-| Status | Meaning |
-|--------|---------|
-| In Progress | Goal is active and being worked on |
-| Completed | Goal was achieved |
-| Withdrawn | Member refused or goal was abandoned |
+| Status | ActionStatus_ID | Meaning |
+|--------|-----------------|---------|
+| Not Started | 1 | Goal was set but member hasn't begun working on it |
+| In Progress | 2 | Goal is active and being worked on |
+| Completed | 3, 5 | Goal was achieved |
+| Withdrawn | 4 | Member refused or goal was abandoned |
 
 ### Goal Number
 
@@ -227,28 +233,35 @@ The original report spec references Achievement/Habit/Learning as goal types. Th
 
 | Goal Domain | Coach-Created | % | System-Recommended | % |
 |-------------|---------------|---|--------------------|----|
-| Physical | ... | ... | ... | ... |
-| Mental | ... | ... | ... | ... |
+| Gaps in Care | ... | ... | ... | ... |
+| Exercise | ... | ... | ... | ... |
+| Nutrition | ... | ... | ... | ... |
+| Weight Management | ... | ... | ... | ... |
+| Tobacco Cessation | ... | ... | ... | ... |
+| Mental/Behavioral Health | ... | ... | ... | ... |
+| Stress Management | ... | ... | ... | ... |
+| Condition Management | ... | ... | ... | ... |
 
 ### Output 4: Goal Domain & Status
 
-| Goal Domain | Completed | % | In Progress | % | Withdrawn | % |
-|-------------|-----------|---|-------------|---|-----------|---|
-| Physical | ... | ... | ... | ... | ... | ... |
+| Goal Domain | Not Started | % | In Progress | % | Completed | % | Withdrawn | % |
+|-------------|-------------|---|-------------|---|-----------|---|-----------|---|
+| Gaps in Care | ... | ... | ... | ... | ... | ... | ... | ... |
+| Exercise | ... | ... | ... | ... | ... | ... | ... | ... |
 
 ### Output 5: Goal Number & Status
 
-| Goal Number | Completed | % | In Progress | % | Withdrawn | % |
-|-------------|-----------|---|-------------|---|-----------|---|
-| 1 | ... | ... | ... | ... | ... | ... |
-| 2 | ... | ... | ... | ... | ... | ... |
+| Goal Number | Not Started | % | In Progress | % | Completed | % | Withdrawn | % |
+|-------------|-------------|---|-------------|---|-----------|---|-----------|---|
+| 1 | ... | ... | ... | ... | ... | ... | ... | ... |
+| 2 | ... | ... | ... | ... | ... | ... | ... | ... |
 
 ### Output 6: Goal Type & Status
 
-| Goal Type | Completed | % | In Progress | % | Withdrawn | % |
-|-----------|-----------|---|-------------|---|-----------|---|
-| Coach-Created | ... | ... | ... | ... | ... | ... |
-| System-Recommended | ... | ... | ... | ... | ... | ... |
+| Goal Type | Not Started | % | In Progress | % | Completed | % | Withdrawn | % |
+|-----------|-------------|---|-------------|---|-----------|---|-----------|---|
+| Coach-Created | ... | ... | ... | ... | ... | ... | ... | ... |
+| System-Recommended | ... | ... | ... | ... | ... | ... | ... | ... |
 
 ---
 
@@ -321,6 +334,8 @@ Run the entire `coaching_call_topics_goals.sql` file in a Vertica session. Add f
 |-------|--------|--------|
 | Multi-topic calls deduped to one | 38% of calls have 2+ topics. Report shows one per call. | Accepted: report spec requires one per call. Most-frequent-topic tiebreak used. |
 | Goal Type (Achievement/Habit/Learning) | Not available platform-wide | Accepted: Coach-Created/System-Recommended used as alternative |
+| Not Started goals dominate volume | 5.6M "Not Started" vs 67K "In Progress" | Monitor: may need to exclude or separate in output |
+| ActionStatus_ID 5 mapped to Completed | 211K rows with close dates, same behavior as status 3 | Accepted: both represent achieved goals |
 
 ---
 
@@ -334,9 +349,9 @@ Run the entire `coaching_call_topics_goals.sql` file in a Vertica session. Add f
 
 ### Short-term improvements
 
-4. **Add an "Environmental" goal domain** if stakeholders want sleep/hydration/CPAP separated from Physical.
-5. **Add question 503721 (Progress toward goal)** to supplement goal status. Members at 100% progress in the workflow could be marked Completed even if their SCP goal wasn't formally closed.
-6. **Add DM prior topic fallback** (Tier 3 currently only uses LM topics for lookback; DM members with no DM topic on a call date could use their most recent DM topic).
+4. **Add question 503721 (Progress toward goal)** to supplement goal status. Members at 100% progress in the workflow could be marked Completed even if their SCP goal wasn't formally closed.
+5. **Add DM prior topic fallback** (Tier 3 currently only uses LM topics for lookback; DM members with no DM topic on a call date could use their most recent DM topic).
+6. **Consider excluding "Not Started" goals from summary outputs** — 5.6M goals are status 1 (Not Started) vs 67K In Progress. May overwhelm the output. Could show as a separate line or exclude from domain/status crosstabs.
 
 ### Future enhancements
 
