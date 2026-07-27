@@ -1,13 +1,15 @@
 """
 Coaching Call Discussions — Monthly PowerPoint Report Generator
 
-Queries the persistent Carefirst_Sandbox tables and generates a branded
-PowerPoint report with dashboard metrics.
+Produces a professional branded report with:
+  - Current month metrics
+  - Year-to-date (YTD) totals
+  - Month-over-month (MoM) comparisons with delta indicators
 
 Usage:
-    python3 generate_report.py                              # HP_SCCareFirst, current year
+    python3 generate_report.py                              # HP_SCCAREFIRST, prior month
     python3 generate_report.py ER_SHBP                      # specific customer
-    python3 generate_report.py HP_SCCareFirst 2025-01-01 2025-06-30  # customer + date range
+    python3 generate_report.py HP_SCCAREFIRST 2026-06-01 2026-06-30
 """
 import sys
 import os
@@ -33,16 +35,17 @@ COLOR_PRIMARY = RGBColor(0x00, 0x4D, 0x3D)    # Dark teal
 COLOR_ACCENT = RGBColor(0x00, 0xBF, 0xA5)     # Bright teal
 COLOR_WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 COLOR_DARK = RGBColor(0x33, 0x33, 0x33)
-COLOR_LIGHT_BG = RGBColor(0xF5, 0xF5, 0xF5)
+COLOR_LIGHT_GRAY = RGBColor(0xF7, 0xF7, 0xF7)
 COLOR_HEADER_BG = RGBColor(0x00, 0x4D, 0x3D)
+COLOR_GREEN = RGBColor(0x2E, 0x7D, 0x32)      # Positive delta
+COLOR_RED = RGBColor(0xC6, 0x28, 0x28)        # Negative delta
+COLOR_MUTED = RGBColor(0x75, 0x75, 0x75)      # Subtle text
 
-# Fonts
 FONT_HEADING = 'Roboto Serif 20pt'
 FONT_BODY = 'Proxima Nova Rg'
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s  %(levelname)-8s  %(message)s')
 log = logging.getLogger(__name__)
-
 
 # --- Parse args ---
 customer_id = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CUSTOMER
@@ -60,60 +63,62 @@ if not start_date:
 elif not end_date:
     end_date = date.today().strftime('%Y-%m-%d')
 
+# Compute prior month and YTD ranges
+report_start = datetime.strptime(start_date, '%Y-%m-%d').date()
+report_end = datetime.strptime(end_date, '%Y-%m-%d').date()
+prior_month_start = (report_start - relativedelta(months=1)).strftime('%Y-%m-%d')
+prior_month_end = (report_start - relativedelta(days=1)).strftime('%Y-%m-%d')
+ytd_start = f"{report_start.year}-01-01"
+ytd_end = end_date
 
-def build_filter(table_alias='', date_col='CALL_DATE'):
+report_month_label = report_start.strftime('%B %Y')
+prior_month_label = (report_start - relativedelta(months=1)).strftime('%B %Y')
+
+
+def build_filter(table_alias='', start=None, end=None, date_col='CALL_DATE'):
     """Build WHERE clause fragments for customer and date filtering."""
+    s = start or start_date
+    e = end or end_date
     parts = []
     prefix = f"{table_alias}." if table_alias else ""
     parts.append(f"UPPER({prefix}CUSTOMERID) = UPPER('{customer_id}')")
     if date_col:
-        parts.append(f"{prefix}{date_col} >= '{start_date}'")
-        parts.append(f"{prefix}{date_col} <= '{end_date}'")
+        parts.append(f"{prefix}{date_col} >= '{s}'")
+        parts.append(f"{prefix}{date_col} <= '{e}'")
     return ' AND '.join(parts)
 
 
 # --- Query data ---
 log.info(f"Customer: {customer_id}")
-log.info(f"Period: {start_date} to {end_date}")
+log.info(f"Report month: {report_month_label} ({start_date} to {end_date})")
+log.info(f"Prior month: {prior_month_label} ({prior_month_start} to {prior_month_end})")
+log.info(f"YTD: {ytd_start} to {ytd_end}")
 
-with get_connection() as conn:
-    # Section 1: Coaching Engagement by Wellbeing Topic
-    df_engagement = pd.read_sql(f"""
+
+def query_engagement(conn, start, end):
+    return pd.read_sql(f"""
         SELECT
             T.REPORT_TOPIC AS WELLBEING_TOPIC,
             COUNT(DISTINCT T.CURRENTGUID) AS MEMBERS,
             ROUND(COUNT(DISTINCT T.CURRENTGUID) * 100.0
                 / NULLIFZERO(TOTALS.TOTAL_MEMBERS), 1) AS PCT_OF_MEMBERS,
             COUNT(DISTINCT CASE WHEN G.GOAL_STATUS = 'Completed' THEN G.MEMBERACTION_ID END) AS COMPLETED_GOALS,
-            COUNT(DISTINCT CASE WHEN G.GOAL_STATUS IN ('In Progress','Not Started') THEN G.MEMBERACTION_ID END) AS OPEN_IN_PROGRESS_GOALS
+            COUNT(DISTINCT CASE WHEN G.GOAL_STATUS IN ('In Progress','Not Started') THEN G.MEMBERACTION_ID END) AS OPEN_GOALS
         FROM Carefirst_Sandbox.COACHING_CALL_TOPICS T
         CROSS JOIN (
             SELECT COUNT(DISTINCT CURRENTGUID) AS TOTAL_MEMBERS
             FROM Carefirst_Sandbox.COACHING_CALL_TOPICS
-            WHERE {build_filter()}
+            WHERE {build_filter(start=start, end=end)}
         ) TOTALS
         LEFT JOIN Carefirst_Sandbox.COACHING_CALL_GOALS G ON T.CURRENTGUID = G.CURRENTGUID
-        WHERE {build_filter('T')}
+        WHERE {build_filter('T', start=start, end=end)}
         GROUP BY 1, TOTALS.TOTAL_MEMBERS
         ORDER BY 2 DESC
     """, conn)
 
-    # Section 2: Goal Status by Wellbeing Topic
-    df_goal_status_topic = pd.read_sql(f"""
-        SELECT
-            T.REPORT_TOPIC AS WELLBEING_TOPIC,
-            COUNT(DISTINCT CASE WHEN G.GOAL_STATUS = 'Completed' THEN G.MEMBERACTION_ID END) AS COMPLETED,
-            COUNT(DISTINCT CASE WHEN G.GOAL_STATUS = 'In Progress' THEN G.MEMBERACTION_ID END) AS IN_PROGRESS,
-            COUNT(DISTINCT CASE WHEN G.GOAL_STATUS = 'Not Started' THEN G.MEMBERACTION_ID END) AS NOT_STARTED
-        FROM Carefirst_Sandbox.COACHING_CALL_TOPICS T
-        JOIN Carefirst_Sandbox.COACHING_CALL_GOALS G ON T.CURRENTGUID = G.CURRENTGUID
-        WHERE {build_filter('T')}
-        GROUP BY 1
-        ORDER BY 2 DESC
-    """, conn)
 
-    # Section 3: Goal Status Distribution
-    df_goal_dist = pd.read_sql(f"""
+def query_goal_dist(conn, start, end):
+    return pd.read_sql(f"""
         SELECT
             G.GOAL_STATUS,
             COUNT(*) AS COUNT,
@@ -121,14 +126,16 @@ with get_connection() as conn:
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
         JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
         WHERE G.GOAL_STATUS IN ('Completed','In Progress','Not Started','Withdrawn')
-          AND {build_filter('T')}
+          AND {build_filter('T', start=start, end=end)}
         GROUP BY 1
         ORDER BY CASE G.GOAL_STATUS
-            WHEN 'Completed' THEN 1 WHEN 'In Progress' THEN 2 WHEN 'Not Started' THEN 3 WHEN 'Withdrawn' THEN 4 END
+            WHEN 'Completed' THEN 1 WHEN 'In Progress' THEN 2
+            WHEN 'Not Started' THEN 3 WHEN 'Withdrawn' THEN 4 END
     """, conn)
 
-    # Section 4: Goal Progression by Domain
-    df_goal_prog = pd.read_sql(f"""
+
+def query_goal_prog(conn, start, end):
+    return pd.read_sql(f"""
         SELECT
             G.GOAL_DOMAIN,
             COUNT(*) AS TOTAL_GOALS,
@@ -137,7 +144,7 @@ with get_connection() as conn:
                 / NULLIFZERO(COUNT(*)), 1) AS COMPLETION_RATE
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
         JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
-        WHERE {build_filter('T')}
+        WHERE {build_filter('T', start=start, end=end)}
         GROUP BY 1
         ORDER BY CASE G.GOAL_DOMAIN
             WHEN 'Gaps in Care' THEN 1 WHEN 'Exercise' THEN 2 WHEN 'Nutrition' THEN 3
@@ -147,14 +154,14 @@ with get_connection() as conn:
             WHEN 'Social' THEN 10 WHEN 'Spiritual' THEN 11 ELSE 12 END
     """, conn)
 
-    # Section 5: Tobacco Coaching Focus
-    df_tobacco = pd.read_sql(f"""
+
+def query_tobacco(conn, start, end):
+    return pd.read_sql(f"""
         SELECT 'Tobacco Participants' AS METRIC,
             COUNT(DISTINCT TB.CURRENTGUID)::VARCHAR AS VALUE
         FROM Carefirst_Sandbox.COACHING_CALL_TOBACCO TB
         JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON TB.CURRENTGUID = T.CURRENTGUID
-        WHERE {build_filter('T')}
-
+        WHERE {build_filter('T', start=start, end=end)}
         UNION ALL
         SELECT 'Active Tobacco Participants',
             COUNT(DISTINCT G.CURRENTGUID)::VARCHAR
@@ -163,45 +170,59 @@ with get_connection() as conn:
         JOIN Carefirst_Sandbox.COACHING_CALL_GOALS G
             ON TB.CURRENTGUID = G.CURRENTGUID AND G.GOAL_DOMAIN = 'Tobacco Cessation'
             AND G.GOAL_STATUS IN ('In Progress','Not Started')
-        WHERE {build_filter('T')}
-
+        WHERE {build_filter('T', start=start, end=end)}
         UNION ALL
-        SELECT 'Goals Completed',
-            COUNT(*)::VARCHAR
+        SELECT 'Goals Completed', COUNT(*)::VARCHAR
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
         JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
         WHERE G.GOAL_DOMAIN = 'Tobacco Cessation' AND G.GOAL_STATUS = 'Completed'
-          AND {build_filter('T')}
-
+          AND {build_filter('T', start=start, end=end)}
         UNION ALL
-        SELECT 'Goals In Progress',
-            COUNT(*)::VARCHAR
+        SELECT 'Goals In Progress', COUNT(*)::VARCHAR
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
         JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
         WHERE G.GOAL_DOMAIN = 'Tobacco Cessation' AND G.GOAL_STATUS = 'In Progress'
-          AND {build_filter('T')}
-
+          AND {build_filter('T', start=start, end=end)}
         UNION ALL
         SELECT 'Completion Rate',
             ROUND(SUM(CASE WHEN G.GOAL_STATUS = 'Completed' THEN 1 ELSE 0 END) * 100.0
-                / NULLIFZERO(COUNT(*)), 1)::VARCHAR || '%'
+                / NULLIFZERO(COUNT(*)), 1)::VARCHAR || '%%'
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
         JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
         WHERE G.GOAL_DOMAIN = 'Tobacco Cessation'
           AND G.GOAL_STATUS IN ('Completed','In Progress','Not Started')
-          AND {build_filter('T')}
+          AND {build_filter('T', start=start, end=end)}
     """, conn)
+
+
+with get_connection() as conn:
+    # Current month
+    df_engagement = query_engagement(conn, start_date, end_date)
+    df_goal_dist = query_goal_dist(conn, start_date, end_date)
+    df_goal_prog = query_goal_prog(conn, start_date, end_date)
+    df_tobacco = query_tobacco(conn, start_date, end_date)
+
+    # Prior month
+    df_engagement_prior = query_engagement(conn, prior_month_start, prior_month_end)
+    df_goal_dist_prior = query_goal_dist(conn, prior_month_start, prior_month_end)
+    df_tobacco_prior = query_tobacco(conn, prior_month_start, prior_month_end)
+
+    # YTD
+    df_engagement_ytd = query_engagement(conn, ytd_start, ytd_end)
+    df_goal_dist_ytd = query_goal_dist(conn, ytd_start, ytd_end)
+    df_goal_prog_ytd = query_goal_prog(conn, ytd_start, ytd_end)
+    df_tobacco_ytd = query_tobacco(conn, ytd_start, ytd_end)
 
 log.info(f"Data loaded: {len(df_engagement)} topics, {len(df_goal_prog)} domains")
 
 
-# --- PowerPoint generation ---
-def set_cell_format(cell, text, font_size=10, bold=False, color=COLOR_DARK, alignment=PP_ALIGN.LEFT, fill=None):
-    """Format a table cell with consistent styling."""
+# --- PowerPoint helpers ---
+def set_cell(cell, text, font_size=9, bold=False, color=COLOR_DARK, align=PP_ALIGN.LEFT, fill=None):
+    """Format a single table cell."""
     cell.text = str(text) if text is not None else ''
-    for paragraph in cell.text_frame.paragraphs:
-        paragraph.alignment = alignment
-        for run in paragraph.runs:
+    for para in cell.text_frame.paragraphs:
+        para.alignment = align
+        for run in para.runs:
             run.font.name = FONT_BODY
             run.font.size = Pt(font_size)
             run.font.bold = bold
@@ -212,142 +233,275 @@ def set_cell_format(cell, text, font_size=10, bold=False, color=COLOR_DARK, alig
         cell.fill.fore_color.rgb = fill
 
 
-def add_branded_table(slide, df, left, top, width, height, title=None, pct_cols=None):
-    """Add a formatted table to a slide with branded header row."""
-    rows = len(df) + 1  # +1 for header
+def add_table(slide, df, left, top, width, height, pct_cols=None, first_col_width=None):
+    """Add a branded table with header styling and alternating rows."""
+    rows = len(df) + 1
     cols = len(df.columns)
-    table_shape = slide.shapes.add_table(rows, cols, left, top, width, height)
-    table = table_shape.table
+    tbl_shape = slide.shapes.add_table(rows, cols, left, top, width, height)
+    tbl = tbl_shape.table
 
-    # Set column widths proportionally
-    col_width = width // cols
-    for i in range(cols):
-        table.columns[i].width = col_width
+    # Column widths
+    if first_col_width and cols > 1:
+        tbl.columns[0].width = first_col_width
+        remaining = (width - first_col_width) // (cols - 1)
+        for i in range(1, cols):
+            tbl.columns[i].width = remaining
+    else:
+        cw = width // cols
+        for i in range(cols):
+            tbl.columns[i].width = cw
 
-    # Header row
+    # Header
     for c, col_name in enumerate(df.columns):
-        cell = table.cell(0, c)
-        display_name = col_name.replace('_', ' ').title()
-        set_cell_format(cell, display_name, font_size=9, bold=True,
-                       color=COLOR_WHITE, alignment=PP_ALIGN.CENTER, fill=COLOR_HEADER_BG)
+        display = col_name.replace('_', ' ').title()
+        set_cell(tbl.cell(0, c), display, font_size=8, bold=True,
+                 color=COLOR_WHITE, align=PP_ALIGN.CENTER, fill=COLOR_HEADER_BG)
 
-    # Data rows
-    for r, row in df.iterrows():
+    # Data
+    for r_idx, (_, row) in enumerate(df.iterrows()):
         for c, val in enumerate(row):
-            cell = table.cell(r + 1, c)
-            # Format percentages
+            cell = tbl.cell(r_idx + 1, c)
             if pct_cols and df.columns[c] in pct_cols and val is not None:
                 display_val = f"{val}%"
             else:
                 display_val = val
-            is_numeric = isinstance(val, (int, float))
-            align = PP_ALIGN.RIGHT if is_numeric else PP_ALIGN.LEFT
-            # Alternating row shading
-            fill_color = COLOR_LIGHT_BG if r % 2 == 0 else None
-            set_cell_format(cell, display_val, font_size=9, color=COLOR_DARK,
-                          alignment=align, fill=fill_color)
+            is_num = isinstance(val, (int, float))
+            align = PP_ALIGN.RIGHT if is_num else PP_ALIGN.LEFT
+            fill = COLOR_LIGHT_GRAY if r_idx % 2 == 0 else None
+            set_cell(cell, display_val, font_size=9, color=COLOR_DARK, align=align, fill=fill)
 
-    return table_shape
+    return tbl_shape
 
 
-def add_section_title(slide, text, left, top):
-    """Add a bold section title text box."""
-    txBox = slide.shapes.add_textbox(left, top, Inches(8), Pt(30))
-    tf = txBox.text_frame
-    p = tf.paragraphs[0]
+def add_title(slide, text, left, top, size=14):
+    """Section title."""
+    tb = slide.shapes.add_textbox(left, top, Inches(9), Pt(size * 2))
+    p = tb.text_frame.paragraphs[0]
     p.text = text
     p.font.name = FONT_BODY
-    p.font.size = Pt(14)
+    p.font.size = Pt(size)
     p.font.bold = True
     p.font.color.rgb = COLOR_PRIMARY
-    return txBox
+    return tb
 
 
-# Build presentation
+def add_kpi_box(slide, label, value, delta=None, left=Inches(0), top=Inches(0), width=Inches(2.2), height=Inches(1.1)):
+    """Add a single KPI metric box with optional MoM delta."""
+    tb = slide.shapes.add_textbox(left, top, width, height)
+    tf = tb.text_frame
+    tf.word_wrap = True
+
+    # Value (large)
+    p = tf.paragraphs[0]
+    p.text = str(value)
+    p.font.name = FONT_BODY
+    p.font.size = Pt(22)
+    p.font.bold = True
+    p.font.color.rgb = COLOR_PRIMARY
+    p.alignment = PP_ALIGN.CENTER
+
+    # Label
+    p2 = tf.add_paragraph()
+    p2.text = label
+    p2.font.name = FONT_BODY
+    p2.font.size = Pt(9)
+    p2.font.color.rgb = COLOR_MUTED
+    p2.alignment = PP_ALIGN.CENTER
+
+    # Delta indicator
+    if delta is not None and delta != 0:
+        p3 = tf.add_paragraph()
+        arrow = "▲" if delta > 0 else "▼"
+        p3.text = f"{arrow} {abs(delta):,} vs prior month"
+        p3.font.name = FONT_BODY
+        p3.font.size = Pt(8)
+        p3.font.color.rgb = COLOR_GREEN if delta > 0 else COLOR_RED
+        p3.alignment = PP_ALIGN.CENTER
+
+    return tb
+
+
+def safe_int(val):
+    """Convert a value to int, handling strings and None."""
+    if val is None:
+        return 0
+    try:
+        return int(float(str(val).replace('%', '').replace(',', '')))
+    except (ValueError, TypeError):
+        return 0
+
+
+# --- Compute KPIs ---
+current_members = int(df_engagement['MEMBERS'].sum()) if len(df_engagement) > 0 else 0
+prior_members = int(df_engagement_prior['MEMBERS'].sum()) if len(df_engagement_prior) > 0 else 0
+ytd_members = int(df_engagement_ytd['MEMBERS'].sum()) if len(df_engagement_ytd) > 0 else 0
+
+current_completed = int(df_goal_dist[df_goal_dist['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist) > 0 else 0
+prior_completed = int(df_goal_dist_prior[df_goal_dist_prior['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_prior) > 0 else 0
+
+current_calls = len(df_engagement) if len(df_engagement) > 0 else 0  # topics count
+
+# Tobacco KPIs
+tob_current = df_tobacco.set_index('METRIC')['VALUE'].to_dict() if len(df_tobacco) > 0 else {}
+tob_prior = df_tobacco_prior.set_index('METRIC')['VALUE'].to_dict() if len(df_tobacco_prior) > 0 else {}
+tob_ytd = df_tobacco_ytd.set_index('METRIC')['VALUE'].to_dict() if len(df_tobacco_ytd) > 0 else {}
+
+
+# --- Build presentation ---
 prs = Presentation(TEMPLATE_PATH)
 
-# Remove all existing slides (we only want the template's theme/master)
+# Remove template slides
 while len(prs.slides) > 0:
     rId = prs.slides._sldIdLst[0].rId
     prs.part.drop_rel(rId)
     del prs.slides._sldIdLst[0]
 
-# --- SLIDE 1: Title ---
-slide_layout = prs.slide_layouts[7]  # Blank
-slide = prs.slides.add_slide(slide_layout)
+BLANK = prs.slide_layouts[7]
 
-# Title text
-txBox = slide.shapes.add_textbox(Inches(0.75), Inches(2.0), Inches(8.5), Inches(1.5))
-tf = txBox.text_frame
+# ===== SLIDE 1: Title =====
+slide = prs.slides.add_slide(BLANK)
+tb = slide.shapes.add_textbox(Inches(0.75), Inches(1.8), Inches(8.5), Inches(2))
+tf = tb.text_frame
 tf.word_wrap = True
 p = tf.paragraphs[0]
 p.text = "Coaching Call Discussions"
 p.font.name = FONT_HEADING
 p.font.size = Pt(36)
 p.font.color.rgb = COLOR_PRIMARY
-
-# Subtitle
 p2 = tf.add_paragraph()
 p2.text = "Monthly Report"
 p2.font.name = FONT_BODY
 p2.font.size = Pt(20)
 p2.font.color.rgb = COLOR_ACCENT
+p2.space_before = Pt(8)
 
-# Customer + period
-txBox2 = slide.shapes.add_textbox(Inches(0.75), Inches(4.0), Inches(6), Inches(1))
-tf2 = txBox2.text_frame
+tb2 = slide.shapes.add_textbox(Inches(0.75), Inches(4.2), Inches(8), Inches(0.8))
+tf2 = tb2.text_frame
 p3 = tf2.paragraphs[0]
-p3.text = f"{customer_id}  |  {start_date} to {end_date}"
+p3.text = f"{customer_id}  |  {report_month_label}"
 p3.font.name = FONT_BODY
 p3.font.size = Pt(14)
 p3.font.color.rgb = COLOR_DARK
+p4 = tf2.add_paragraph()
+p4.text = f"Report Period: {start_date} to {end_date}  |  YTD: {ytd_start} to {ytd_end}"
+p4.font.name = FONT_BODY
+p4.font.size = Pt(10)
+p4.font.color.rgb = COLOR_MUTED
 
 
-# --- SLIDE 2: Coaching Engagement by Wellbeing Topic ---
-slide = prs.slides.add_slide(prs.slide_layouts[7])
-add_section_title(slide, "Coaching Engagement by Wellbeing Topic", Inches(0.4), Inches(0.3))
-add_branded_table(slide, df_engagement,
-                  left=Inches(0.4), top=Inches(0.8),
-                  width=Inches(9.2), height=Inches(5.5),
-                  pct_cols=['PCT_OF_MEMBERS'])
+# ===== SLIDE 2: Executive Summary KPIs =====
+slide = prs.slides.add_slide(BLANK)
+add_title(slide, "Executive Summary", Inches(0.4), Inches(0.2), size=16)
+
+# Subtitle
+tb = slide.shapes.add_textbox(Inches(0.4), Inches(0.55), Inches(8), Inches(0.3))
+p = tb.text_frame.paragraphs[0]
+p.text = f"{report_month_label} vs {prior_month_label}"
+p.font.name = FONT_BODY
+p.font.size = Pt(10)
+p.font.color.rgb = COLOR_MUTED
+
+# KPI row
+x_start = Inches(0.3)
+y_pos = Inches(1.0)
+kpi_width = Inches(2.3)
+spacing = Inches(2.4)
+
+add_kpi_box(slide, "Members Coached", f"{current_members:,}",
+            delta=current_members - prior_members,
+            left=x_start, top=y_pos, width=kpi_width)
+add_kpi_box(slide, "Goals Completed", f"{current_completed:,}",
+            delta=current_completed - prior_completed,
+            left=x_start + spacing, top=y_pos, width=kpi_width)
+add_kpi_box(slide, "YTD Members", f"{ytd_members:,}",
+            left=x_start + spacing * 2, top=y_pos, width=kpi_width)
+add_kpi_box(slide, "Tobacco Participants", tob_current.get('Tobacco Participants', '0'),
+            delta=safe_int(tob_current.get('Tobacco Participants', 0)) - safe_int(tob_prior.get('Tobacco Participants', 0)),
+            left=x_start + spacing * 3, top=y_pos, width=kpi_width)
+
+# Goal Status Distribution below KPIs
+add_title(slide, "Goal Status Distribution", Inches(0.4), Inches(2.4))
+add_table(slide, df_goal_dist,
+          left=Inches(0.4), top=Inches(2.9),
+          width=Inches(4.5), height=Inches(2.2),
+          pct_cols=['GOAL_PCT'])
+
+# YTD Goal Status (right side)
+add_title(slide, f"YTD Goal Status ({ytd_start[:4]})", Inches(5.2), Inches(2.4))
+add_table(slide, df_goal_dist_ytd,
+          left=Inches(5.2), top=Inches(2.9),
+          width=Inches(4.5), height=Inches(2.2),
+          pct_cols=['GOAL_PCT'])
 
 
-# --- SLIDE 3: Goal Status by Wellbeing Topic ---
-slide = prs.slides.add_slide(prs.slide_layouts[7])
-add_section_title(slide, "Goal Status by Wellbeing Topic", Inches(0.4), Inches(0.3))
-add_branded_table(slide, df_goal_status_topic,
-                  left=Inches(0.4), top=Inches(0.8),
-                  width=Inches(9.2), height=Inches(5.5))
+# ===== SLIDE 3: Coaching Engagement by Wellbeing Topic =====
+slide = prs.slides.add_slide(BLANK)
+add_title(slide, f"Coaching Engagement by Wellbeing Topic — {report_month_label}", Inches(0.4), Inches(0.2))
+add_table(slide, df_engagement,
+          left=Inches(0.3), top=Inches(0.7),
+          width=Inches(9.4), height=Inches(4.5),
+          pct_cols=['PCT_OF_MEMBERS'],
+          first_col_width=Inches(2.2))
+
+# YTD summary below
+if len(df_engagement_ytd) > 0:
+    add_title(slide, f"YTD Totals ({ytd_start[:4]})", Inches(0.4), Inches(5.4))
+    tb = slide.shapes.add_textbox(Inches(0.4), Inches(5.8), Inches(9), Inches(0.4))
+    p = tb.text_frame.paragraphs[0]
+    ytd_total = int(df_engagement_ytd['MEMBERS'].sum())
+    p.text = f"Total unique members coached YTD: {ytd_total:,}  |  Topics with calls: {len(df_engagement_ytd)}"
+    p.font.name = FONT_BODY
+    p.font.size = Pt(10)
+    p.font.color.rgb = COLOR_MUTED
 
 
-# --- SLIDE 4: Goal Status Distribution + Goal Progression ---
-slide = prs.slides.add_slide(prs.slide_layouts[7])
+# ===== SLIDE 4: Goal Progression by Domain =====
+slide = prs.slides.add_slide(BLANK)
+add_title(slide, f"Goal Progression by Domain — {report_month_label}", Inches(0.4), Inches(0.2))
+add_table(slide, df_goal_prog,
+          left=Inches(0.3), top=Inches(0.7),
+          width=Inches(9.4), height=Inches(4.0),
+          pct_cols=['COMPLETION_RATE'],
+          first_col_width=Inches(2.5))
 
-# Goal Status Distribution (left side)
-add_section_title(slide, "Goal Status Distribution", Inches(0.4), Inches(0.3))
-add_branded_table(slide, df_goal_dist,
-                  left=Inches(0.4), top=Inches(0.8),
-                  width=Inches(4.3), height=Inches(2.0),
-                  pct_cols=['GOAL_PCT'])
-
-# Goal Progression (below)
-add_section_title(slide, "Goal Progression", Inches(0.4), Inches(3.2))
-add_branded_table(slide, df_goal_prog,
-                  left=Inches(0.4), top=Inches(3.7),
-                  width=Inches(9.2), height=Inches(3.5),
-                  pct_cols=['COMPLETION_RATE'])
+# YTD progression below
+if len(df_goal_prog_ytd) > 0:
+    add_title(slide, f"YTD Goal Progression ({ytd_start[:4]})", Inches(0.4), Inches(5.0))
+    add_table(slide, df_goal_prog_ytd,
+              left=Inches(0.3), top=Inches(5.4),
+              width=Inches(9.4), height=Inches(1.8),
+              pct_cols=['COMPLETION_RATE'],
+              first_col_width=Inches(2.5))
 
 
-# --- SLIDE 5: Tobacco Coaching Focus ---
-slide = prs.slides.add_slide(prs.slide_layouts[7])
-add_section_title(slide, "Tobacco Coaching Focus", Inches(0.4), Inches(0.3))
-add_branded_table(slide, df_tobacco,
-                  left=Inches(0.4), top=Inches(0.8),
-                  width=Inches(5.0), height=Inches(2.5))
+# ===== SLIDE 5: Tobacco Coaching Focus =====
+slide = prs.slides.add_slide(BLANK)
+add_title(slide, "Tobacco Coaching Focus", Inches(0.4), Inches(0.2))
+
+# Current month table
+add_title(slide, report_month_label, Inches(0.4), Inches(0.6), size=11)
+add_table(slide, df_tobacco,
+          left=Inches(0.4), top=Inches(1.0),
+          width=Inches(4.2), height=Inches(2.3),
+          first_col_width=Inches(2.8))
+
+# YTD table
+add_title(slide, f"Year-to-Date ({ytd_start[:4]})", Inches(5.2), Inches(0.6), size=11)
+add_table(slide, df_tobacco_ytd,
+          left=Inches(5.2), top=Inches(1.0),
+          width=Inches(4.2), height=Inches(2.3),
+          first_col_width=Inches(2.8))
+
+# Prior month comparison
+add_title(slide, f"Prior Month ({prior_month_label})", Inches(0.4), Inches(3.6), size=11)
+add_table(slide, df_tobacco_prior,
+          left=Inches(0.4), top=Inches(4.0),
+          width=Inches(4.2), height=Inches(2.3),
+          first_col_width=Inches(2.8))
 
 
 # --- Save ---
-period_str = f"{start_date.replace('-','')}_{end_date.replace('-','')}"
+period_str = f"{start_date.replace('-', '')}_{end_date.replace('-', '')}"
 output_filename = f"coaching_report_{customer_id}_{period_str}.pptx"
 output_path = os.path.join(SCRIPT_DIR, output_filename)
 prs.save(output_path)
