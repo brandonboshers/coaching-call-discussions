@@ -283,7 +283,7 @@ All tables include a `REFRESH_DATE` column showing when the data was last rebuil
 
 ```bash
 # Manual trigger
-python3 weekly_refresh.py
+python3 monthly_refresh.py
 
 # Via launchd
 launchctl start com.sharecare.ETL_Monthly_1st6am_CoachingDiscussions
@@ -293,10 +293,10 @@ Log: `~/Library/Logs/coaching-discussions.log`
 
 ### Airflow deployment
 
-The same `weekly_refresh.py` can be called from an Airflow DAG:
+The same `monthly_refresh.py` can be called from an Airflow DAG:
 
 ```python
-from coaching_call_discussions.weekly_refresh import main
+from coaching_call_discussions.monthly_refresh import main
 
 # In a PythonOperator:
 task = PythonOperator(task_id='coaching_discussions_refresh', python_callable=main)
@@ -378,8 +378,9 @@ launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.sharecare.ETL_Monthly_
 | File | Purpose |
 |------|---------|
 | `coaching_call_topics_goals.sql` | Interactive SQL query with output SELECTs (for DbVisualizer / ad-hoc) |
-| `weekly_refresh.sql` | Pipeline SQL — same logic but ends with TRUNCATE+INSERT to Vertica |
-| `weekly_refresh.py` | Automated pipeline — executes SQL, logs progress, persists to Carefirst_Sandbox |
+| `monthly_refresh.sql` | Pipeline SQL — same logic but ends with TRUNCATE+INSERT to Vertica |
+| `monthly_refresh.py` | Automated pipeline — executes SQL, logs progress, persists to Carefirst_Sandbox |
+| `monthly_report_queries.sql` | Dashboard queries — reads from persistent tables to produce report output |
 | `run_report.py` | Ad-hoc — runs interactive SQL and exports formatted Excel |
 | `ddl_create_tables.sql` | One-time DDL to create the 3 persistent tables |
 | `run_coaching_refresh.sh` | Shell wrapper for launchd |

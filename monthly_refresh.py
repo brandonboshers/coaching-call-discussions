@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 
 # --- Path setup ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-SQL_FILE = os.path.join(SCRIPT_DIR, 'weekly_refresh.sql')
+SQL_FILE = os.path.join(SCRIPT_DIR, 'monthly_refresh.sql')
 
 # --- Connection ---
 # When running locally, use shared db_connect helper.
