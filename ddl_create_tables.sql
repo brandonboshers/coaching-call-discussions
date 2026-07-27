@@ -5,7 +5,7 @@
 
 -- COACHING_CALL_TOPICS: One row per account per call day with assigned topic
 CREATE TABLE IF NOT EXISTS Carefirst_Sandbox.COACHING_CALL_TOPICS (
-    REPORT_MONTH    VARCHAR(7),
+    REPORT_MONTH    VARCHAR(6),
     ACCOUNT         VARCHAR(50),
     GUID            VARCHAR(50),
     CUSTOMERID      VARCHAR(50),
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS Carefirst_Sandbox.COACHING_CALL_TOPICS (
 
 -- COACHING_CALL_TOBACCO: Members flagged for tobacco discussion
 CREATE TABLE IF NOT EXISTS Carefirst_Sandbox.COACHING_CALL_TOBACCO (
-    REPORT_MONTH    VARCHAR(7),
+    REPORT_MONTH    VARCHAR(6),
     ACCOUNT         VARCHAR(50),
     GUID            VARCHAR(50),
     TOBACCO_DISCUSSED VARCHAR(10),
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS Carefirst_Sandbox.COACHING_CALL_TOBACCO (
 
 -- COACHING_CALL_GOALS: One row per goal per member with domain, type, status
 CREATE TABLE IF NOT EXISTS Carefirst_Sandbox.COACHING_CALL_GOALS (
-    REPORT_MONTH    VARCHAR(7),
+    REPORT_MONTH    VARCHAR(6),
     ACCOUNT         VARCHAR(50),
     GOAL_TYPE       VARCHAR(50),
     GOAL_DOMAIN     VARCHAR(50),
