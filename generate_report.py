@@ -92,7 +92,7 @@ with get_connection() as conn:
             FROM Carefirst_Sandbox.COACHING_CALL_TOPICS
             WHERE {build_filter()}
         ) TOTALS
-        LEFT JOIN Carefirst_Sandbox.COACHING_CALL_GOALS G ON T.GUID = G.GUID
+        LEFT JOIN Carefirst_Sandbox.COACHING_CALL_GOALS G ON T.CURRENTGUID = G.CURRENTGUID
         WHERE {build_filter('T')}
         GROUP BY 1, TOTALS.TOTAL_MEMBERS
         ORDER BY 2 DESC
@@ -106,7 +106,7 @@ with get_connection() as conn:
             COUNT(DISTINCT CASE WHEN G.GOAL_STATUS = 'In Progress' THEN G.MEMBERACTION_ID END) AS IN_PROGRESS,
             COUNT(DISTINCT CASE WHEN G.GOAL_STATUS = 'Not Started' THEN G.MEMBERACTION_ID END) AS NOT_STARTED
         FROM Carefirst_Sandbox.COACHING_CALL_TOPICS T
-        JOIN Carefirst_Sandbox.COACHING_CALL_GOALS G ON T.GUID = G.GUID
+        JOIN Carefirst_Sandbox.COACHING_CALL_GOALS G ON T.CURRENTGUID = G.CURRENTGUID
         WHERE {build_filter('T')}
         GROUP BY 1
         ORDER BY 2 DESC
@@ -161,7 +161,7 @@ with get_connection() as conn:
         FROM Carefirst_Sandbox.COACHING_CALL_TOBACCO TB
         JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON TB.GUID = T.GUID
         JOIN Carefirst_Sandbox.COACHING_CALL_GOALS G
-            ON TB.GUID = G.GUID AND G.GOAL_DOMAIN = 'Tobacco Cessation'
+            ON TB.CURRENTGUID = G.CURRENTGUID AND G.GOAL_DOMAIN = 'Tobacco Cessation'
             AND G.GOAL_STATUS IN ('In Progress','Not Started')
         WHERE {build_filter('T')}
 
