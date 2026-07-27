@@ -22,7 +22,6 @@ from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
-from pptx.enum.table import PP_HORZANCHOR
 
 # --- Config ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

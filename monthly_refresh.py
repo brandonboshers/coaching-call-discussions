@@ -1,17 +1,17 @@
 """
 Coaching Call Discussions — Monthly Refresh
 
-Executes weekly_refresh.sql against Vertica to rebuild the persistent
+Executes monthly_refresh.sql against Vertica to rebuild the persistent
 Carefirst_Sandbox tables (COACHING_CALL_TOPICS, COACHING_CALL_TOBACCO,
 COACHING_CALL_GOALS).
 
 Designed for:
   - Local execution via launchd (monthly, 1st of each month)
   - Airflow execution (import main() or call as script)
-  - Manual execution (python3 weekly_refresh.py)
+  - Manual execution (python3 monthly_refresh.py)
 
 Usage:
-    python3 weekly_refresh.py
+    python3 monthly_refresh.py
 """
 import logging
 import os
@@ -83,9 +83,9 @@ def get_first_keyword(stmt):
 
 
 def main():
-    """Execute the weekly refresh pipeline."""
+    """Execute the monthly refresh pipeline."""
     log.info("=" * 60)
-    log.info("COACHING CALL DISCUSSIONS - WEEKLY REFRESH")
+    log.info("COACHING CALL DISCUSSIONS - MONTHLY REFRESH")
     log.info("=" * 60)
 
     # Load SQL
@@ -116,12 +116,13 @@ def main():
                 cursor.execute(stmt)
                 elapsed = time.time() - step_start
 
-                # Log row counts for INSERT/TRUNCATE
+                # Log row counts for INSERT/DELETE
                 if keyword == 'INSERT':
                     rowcount = cursor.rowcount if cursor.rowcount >= 0 else '?'
                     log.info(f"           -> {rowcount} rows inserted ({elapsed:.1f}s)")
-                elif keyword == 'TRUNCATE':
-                    log.info(f"           -> truncated ({elapsed:.1f}s)")
+                elif keyword == 'DELETE':
+                    rowcount = cursor.rowcount if cursor.rowcount >= 0 else '?'
+                    log.info(f"           -> {rowcount} rows deleted ({elapsed:.1f}s)")
                 elif elapsed > 5:
                     log.info(f"           -> done ({elapsed:.1f}s)")
 

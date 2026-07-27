@@ -4,7 +4,7 @@
 -- APPROACH: CALL-FIRST with TIERED TOPIC FALLBACK
 --   Tier 1:   Exact date match (502533/502758 LM + 502599 DM)
 --   Tier 1.5: Goal/detail text inference (502534, 502833, 502616)
---   Tier 2:   Call type inference (Tobacco->Behavioral Health, Specialty/Clinical->Chronic Disease State, etc.)
+--   Tier 2:   Call type inference (Tobacco->Tobacco Cessation, Specialty/Clinical->Chronic Disease State, etc.)
 --   Tier 3:   Most recent prior topic (180-day lookback)
 --   Tier 4:   "General" (no topic determinable)
 --
