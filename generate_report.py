@@ -418,12 +418,13 @@ desc_title.font.bold = True
 desc_title.font.color.rgb = COLOR_PRIMARY
 
 desc_lines = [
-    "This report covers all members who had at least one successful outbound coaching call last 12 months. Monthly columns show the current and prior month for trend comparison.",
-    "Each call is assigned a single wellbeing topic using a tiered approach: (1) direct coach selection on the call form, (2) keyword inference from coach notes, (3) call type (e.g., Tobacco, Dietary Referral), or (4) the member's most recent prior topic within 180 days.",
-    "Calls that cannot be classified by any tier are labeled 'General.' Goals that don't match a known domain keyword are labeled 'Other.'",
-    "Goals reflect the current snapshot from the coaching platform. A member's goal status (Not Started, In Progress, Completed, Withdrawn) is their status as of the refresh date, not necessarily within the report period.",
-    "Tobacco Participants are members who discussed tobacco at any point during their coaching history and had a call in the report period. Active Tobacco Participants are the subset who also have a formal Tobacco Cessation goal.",
-    "All metrics show L12M as the primary view with current month and prior month for month-over-month (MoM) trend comparison.",
+    "Population: This report includes all members who completed at least one successful outbound coaching call within the reporting window. Members without coaching activity are excluded from all metrics.",
+    "Wellbeing Topics: Each coaching call is assigned a single discussion topic. Topics are determined by the coach's direct selection on the call workflow form. When no selection is made, the system infers the topic from coach notes, call type classification, or the member's most recently documented topic (within 180 days). Calls with no determinable topic are classified as 'General.'",
+    "Goal Domains: Coaching goals are categorized into 11 wellbeing domains (e.g., Exercise, Nutrition, Condition Management). Goals using standard prefix-based naming are mapped directly; goals with descriptive sentence names are classified using keyword matching. Goals that do not match a recognized domain are reported as 'Other.'",
+    "Goal Status: Reflects the current state of each goal in the coaching platform as of the data refresh date. 'Not Started' indicates a goal has been created but the member has not yet begun working toward it. 'In Progress' indicates active engagement. 'Completed' indicates the goal was achieved. 'Withdrawn' indicates the goal was abandoned or declined.",
+    "Tobacco Focus: 'Tobacco Participants' identifies members who discussed tobacco cessation during any coaching interaction in their history and were active in the reporting period. 'Active Tobacco Participants' is the subset who additionally have a formal Tobacco Cessation goal being tracked in the system.",
+    "Timeframes: The primary view uses a trailing 12-month window (L12M) to provide a comprehensive view of coaching engagement patterns. Current month and prior month columns are included for month-over-month trend analysis. MoM Change reflects the net difference between the current and prior reporting months.",
+    "Data Sources: Coaching calls from BI_REPORTING.MEMBER_CALL_DATA (billable/interaction-eligible types only). Discussion topics from ENT_WH.COACH_NOTES_WORKFLOW. Goals from SCP.AH_MEMBER_ACTION. All data is refreshed monthly on the 1st.",
 ]
 for line in desc_lines:
     p = tf3.add_paragraph()
