@@ -226,6 +226,8 @@ with get_connection() as conn:
     df_engagement_p90 = query_engagement(conn, p90_start, p90_end)
     df_goal_dist_r90 = query_goal_dist(conn, r90_start, r90_end_str)
     df_goal_dist_p90 = query_goal_dist(conn, p90_start, p90_end)
+    df_goal_prog_r90 = query_goal_prog(conn, r90_start, r90_end_str)
+    df_goal_prog_p90 = query_goal_prog(conn, p90_start, p90_end)
 
 log.info(f"Data loaded: {len(df_engagement)} topics, {len(df_goal_prog)} domains")
 
@@ -303,8 +305,8 @@ def add_title(slide, text, left, top, size=14):
     return tb
 
 
-def add_kpi_box(slide, label, value, delta=None, left=Inches(0), top=Inches(0), width=Inches(2.2), height=Inches(1.1)):
-    """Add a single KPI metric box with optional MoM delta."""
+def add_kpi_box(slide, label, value, prior_value=None, delta=None, delta_label="vs prior month", r90_avg=None, p90_avg=None, left=Inches(0), top=Inches(0), width=Inches(2.2), height=Inches(1.1)):
+    """Add a KPI box with monthly comparison and 90-day rolling averages."""
     tb = slide.shapes.add_textbox(left, top, width, height)
     tf = tb.text_frame
     tf.word_wrap = True
@@ -326,15 +328,35 @@ def add_kpi_box(slide, label, value, delta=None, left=Inches(0), top=Inches(0), 
     p2.font.color.rgb = COLOR_MUTED
     p2.alignment = PP_ALIGN.CENTER
 
+    # MoM detail line (e.g., "Jun: 3,903 | May: 3,805")
+    if prior_value is not None:
+        p_mom = tf.add_paragraph()
+        short_curr = report_month_label.split()[0][:3]
+        short_prior = prior_month_label.split()[0][:3]
+        p_mom.text = f"{short_curr}: {value}  |  {short_prior}: {prior_value}"
+        p_mom.font.name = FONT_BODY
+        p_mom.font.size = Pt(7)
+        p_mom.font.color.rgb = COLOR_MUTED
+        p_mom.alignment = PP_ALIGN.CENTER
+
     # Delta indicator
     if delta is not None and delta != 0:
         p3 = tf.add_paragraph()
         arrow = "▲" if delta > 0 else "▼"
-        p3.text = f"{arrow} {abs(delta):,} vs prior month"
+        p3.text = f"{arrow} {abs(delta):,} {delta_label}"
         p3.font.name = FONT_BODY
         p3.font.size = Pt(8)
         p3.font.color.rgb = COLOR_GREEN if delta > 0 else COLOR_RED
         p3.alignment = PP_ALIGN.CENTER
+
+    # 90-day rolling average line
+    if r90_avg is not None and p90_avg is not None:
+        p4 = tf.add_paragraph()
+        p4.text = f"90d Avg: {r90_avg}  |  Prior 90d: {p90_avg}"
+        p4.font.name = FONT_BODY
+        p4.font.size = Pt(7)
+        p4.font.color.rgb = COLOR_MUTED
+        p4.alignment = PP_ALIGN.CENTER
 
     return tb
 
@@ -466,22 +488,38 @@ y_pos = Inches(1.0)
 kpi_width = Inches(2.3)
 spacing = Inches(2.4)
 
+# 90-day rolling averages (per month)
+r90_members = int(df_engagement_r90['MEMBERS'].sum()) if len(df_engagement_r90) > 0 else 0
+p90_members = int(df_engagement_p90['MEMBERS'].sum()) if len(df_engagement_p90) > 0 else 0
+r90_completed = int(df_goal_dist_r90[df_goal_dist_r90['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_r90) > 0 else 0
+p90_completed = int(df_goal_dist_p90[df_goal_dist_p90['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_p90) > 0 else 0
+r90_avg_members = round(r90_members / 3)
+p90_avg_members = round(p90_members / 3)
+r90_avg_completed = round(r90_completed / 3)
+p90_avg_completed = round(p90_completed / 3)
+
 add_kpi_box(slide, "L12M Members Coached", f"{t12_members:,}",
+            prior_value=f"{prior_members:,}",
             delta=current_members - prior_members,
-            left=x_start, top=y_pos, width=kpi_width)
+            r90_avg=f"{r90_avg_members:,}", p90_avg=f"{p90_avg_members:,}",
+            left=x_start, top=y_pos, width=kpi_width, height=Inches(1.6))
 
 t12_completed = int(df_goal_dist_t12[df_goal_dist_t12['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_t12) > 0 else 0
 add_kpi_box(slide, "L12M Goals Completed", f"{t12_completed:,}",
+            prior_value=f"{prior_completed:,}",
             delta=current_completed - prior_completed,
-            left=x_start + spacing, top=y_pos, width=kpi_width)
+            r90_avg=f"{r90_avg_completed:,}", p90_avg=f"{p90_avg_completed:,}",
+            left=x_start + spacing, top=y_pos, width=kpi_width, height=Inches(1.6))
 
 add_kpi_box(slide, f"{report_month_label} Members", f"{current_members:,}",
+            prior_value=f"{prior_members:,}",
             delta=current_members - prior_members,
-            left=x_start + spacing * 2, top=y_pos, width=kpi_width)
+            left=x_start + spacing * 2, top=y_pos, width=kpi_width, height=Inches(1.6))
 
 add_kpi_box(slide, "L12M Tobacco Participants", tob_t12.get('Tobacco Participants', '0'),
+            prior_value=tob_prior.get('Tobacco Participants', '0'),
             delta=safe_int(tob_current.get('Tobacco Participants', 0)) - safe_int(tob_prior.get('Tobacco Participants', 0)),
-            left=x_start + spacing * 3, top=y_pos, width=kpi_width)
+            left=x_start + spacing * 3, top=y_pos, width=kpi_width, height=Inches(1.6))
 
 # 90-day rolling average row
 r90_members = int(df_engagement_r90['MEMBERS'].sum()) if len(df_engagement_r90) > 0 else 0
@@ -495,21 +533,8 @@ p90_avg_members = round(p90_members / 3)
 r90_avg_completed = round(r90_completed / 3)
 p90_avg_completed = round(p90_completed / 3)
 
-add_title(slide, "90-Day Rolling Averages (per month)", Inches(0.4), Inches(2.1), size=10)
-y_pos2 = Inches(2.4)
-add_kpi_box(slide, "Avg Members/Month\n(Current 90d)", f"{r90_avg_members:,}",
-            delta=r90_avg_members - p90_avg_members,
-            left=x_start, top=y_pos2, width=kpi_width, height=Inches(1.2))
-add_kpi_box(slide, "Avg Goals Completed/Month\n(Current 90d)", f"{r90_avg_completed:,}",
-            delta=r90_avg_completed - p90_avg_completed,
-            left=x_start + spacing, top=y_pos2, width=kpi_width, height=Inches(1.2))
-add_kpi_box(slide, "Avg Members/Month\n(Prior 90d)", f"{p90_avg_members:,}",
-            left=x_start + spacing * 2, top=y_pos2, width=kpi_width, height=Inches(1.2))
-add_kpi_box(slide, "Avg Goals Completed/Month\n(Prior 90d)", f"{p90_avg_completed:,}",
-            left=x_start + spacing * 3, top=y_pos2, width=kpi_width, height=Inches(1.2))
-
 # Goal Status Distribution — L12M primary, with monthly columns
-add_title(slide, "Goal Status Distribution", Inches(0.4), Inches(3.8))
+add_title(slide, "Goal Status Distribution", Inches(0.4), Inches(2.9))
 
 # Build combined DataFrame — L12M first
 statuses = ['Completed', 'In Progress', 'Not Started', 'Withdrawn']
@@ -537,7 +562,7 @@ for status in statuses:
 
 df_goal_dist_combined = pd.DataFrame(combined_rows)
 add_table(slide, df_goal_dist_combined,
-          left=Inches(0.4), top=Inches(4.2),
+          left=Inches(0.4), top=Inches(3.3),
           width=Inches(9.2), height=Inches(2.0),
           first_col_width=Inches(1.6))
 
@@ -582,8 +607,8 @@ if tob_part > 0 and tob_active < tob_part:
     insights.append(f"{gap} of {tob_part} tobacco-discussing members ({gap*100//tob_part}%) do not have a formal Tobacco Cessation goal — an opportunity to formalize cessation tracking.")
 
 # Dynamic insights — moved to after the table
-add_title(slide, "Key Insights", Inches(0.4), Inches(6.4), size=10)
-tb_ins = slide.shapes.add_textbox(Inches(0.4), Inches(6.7), Inches(9.2), Inches(0.8))
+add_title(slide, "Key Insights", Inches(0.4), Inches(5.5), size=10)
+tb_ins = slide.shapes.add_textbox(Inches(0.4), Inches(5.8), Inches(9.2), Inches(1.5))
 tf_ins = tb_ins.text_frame
 tf_ins.word_wrap = True
 for i, insight in enumerate(insights[:3]):  # Top 3 insights only to fit
@@ -599,31 +624,34 @@ for i, insight in enumerate(insights[:3]):  # Top 3 insights only to fit
 slide = prs.slides.add_slide(BLANK)
 add_title(slide, "Coaching Engagement by Wellbeing Topic", Inches(0.4), Inches(0.2))
 
-# Build combined engagement table with MoM + L12M
+# Build combined engagement table with MoM + L12M + 90-day
 engagement_combined_rows = []
 all_topics = list(df_engagement['WELLBEING_TOPIC'].unique())
 for topic in all_topics:
     curr = df_engagement[df_engagement['WELLBEING_TOPIC'] == topic]
     prior = df_engagement_prior[df_engagement_prior['WELLBEING_TOPIC'] == topic] if len(df_engagement_prior) > 0 else pd.DataFrame()
     ytd = df_engagement_t12[df_engagement_t12['WELLBEING_TOPIC'] == topic] if len(df_engagement_t12) > 0 else pd.DataFrame()
+    r90 = df_engagement_r90[df_engagement_r90['WELLBEING_TOPIC'] == topic] if len(df_engagement_r90) > 0 else pd.DataFrame()
+    p90 = df_engagement_p90[df_engagement_p90['WELLBEING_TOPIC'] == topic] if len(df_engagement_p90) > 0 else pd.DataFrame()
 
     curr_members = int(curr['MEMBERS'].iloc[0]) if len(curr) > 0 else 0
     prior_members_val = int(prior['MEMBERS'].iloc[0]) if len(prior) > 0 else 0
     t12_members_val = int(ytd['MEMBERS'].iloc[0]) if len(ytd) > 0 else 0
+    r90_mem = int(r90['MEMBERS'].iloc[0]) if len(r90) > 0 else 0
+    p90_mem = int(p90['MEMBERS'].iloc[0]) if len(p90) > 0 else 0
     mom_delta = curr_members - prior_members_val
+    r90_delta = r90_mem - p90_mem
     curr_pct = float(curr['PCT_OF_MEMBERS'].iloc[0]) if len(curr) > 0 else 0.0
-    curr_completed = int(curr['COMPLETED_GOALS'].iloc[0]) if len(curr) > 0 else 0
-    curr_open = int(curr['OPEN_GOALS'].iloc[0]) if len(curr) > 0 else 0
 
     engagement_combined_rows.append({
         'Wellbeing Topic': topic,
-        'L12M Members': f"{t12_members_val:,}",
-        '% of Members': f"{curr_pct:.1f}%",
+        'L12M': f"{t12_members_val:,}",
         f'{report_month_label}': f"{curr_members:,}",
         f'{prior_month_label}': f"{prior_members_val:,}",
-        'MoM Change': f"+{mom_delta:,}" if mom_delta > 0 else f"{mom_delta:,}",
-        'Completed Goals': f"{curr_completed:,}",
-        'Open Goals': f"{curr_open:,}",
+        'MoM \u0394': f"+{mom_delta:,}" if mom_delta > 0 else f"{mom_delta:,}",
+        '90d Avg': f"{round(r90_mem/3):,}",
+        'Prior 90d Avg': f"{round(p90_mem/3):,}",
+        '90d \u0394': f"+{round(r90_delta/3):,}" if r90_delta > 0 else f"{round(r90_delta/3):,}",
     })
 
 df_engagement_combined = pd.DataFrame(engagement_combined_rows)
