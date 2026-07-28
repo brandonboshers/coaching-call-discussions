@@ -825,7 +825,7 @@ p0.font.size = Pt(11)
 p0.font.bold = True
 p0.font.color.rgb = COLOR_PRIMARY
 
-dd_entry(dd1_tf, "Population", "This report includes all members who completed at least one successful outbound coaching call within the reporting window. Members without coaching activity are excluded from all metrics.")
+dd_entry(dd1_tf, "Population", "This report includes all members who completed at least one successful outbound coaching call during an active enrollment period within the reporting window. Engagement/outreach calls and calls outside of enrollment are excluded. Members without qualifying coaching activity are excluded from all metrics.")
 dd_entry(dd1_tf, "Wellbeing Topics", "Each coaching call is assigned a single discussion topic via a tiered classification system: (1) Coach’s direct form selection, (2) keyword inference from coach notes, (3) call type mapping, or (4) most recent prior topic within 180 days. Calls with no determinable topic are classified as ‘General.’")
 dd_entry(dd1_tf, "Goal Domains", "Coaching goals are categorized into 11 wellbeing domains: Gaps in Care, Exercise, Nutrition, Weight Management, Tobacco Cessation, Mental/Behavioral Health, Stress Management, Condition Management, Financial, Social, and Spiritual. Goals that do not match a recognized domain are reported as ‘Other.’")
 
@@ -869,7 +869,7 @@ dd_entry(dd2_tf, "Prior 90-Day Average (Prior 90D Avg)", "Same calculation appli
 dd_entry(dd2_tf, "90D Delta (90D Δ)", "The difference between the current 90-Day Average and the Prior 90-Day Average. Indicates whether the metric is trending up or down over a 6-month horizon.")
 
 dd_section(dd2_tf, "Data Sources & Methodology")
-dd_entry(dd2_tf, "Coaching Calls", "ENT_WH.MEMBER_CALL_DATA – successful outbound calls filtered to billable or interaction-eligible call types per ENT_WH.CALLTYPE_XREF_VW. One call per member per day (most recent kept).")
+dd_entry(dd2_tf, "Coaching Calls", "ENT_WH.MEMBER_CALL_DATA – successful outbound calls filtered to billable or interaction-eligible call types per ENT_WH.CALLTYPE_XREF_VW. Restricted to calls during active enrollment (LEVEL_NAME = Enrolled) and excludes Engagement call types (outreach/scheduling). One call per member per day (most recent kept).")
 dd_entry(dd2_tf, "Discussion Topics", "ENT_WH.COACH_NOTES_WORKFLOW (questions 502533, 502758 for topic selection; 502534, 502833 for goal/detail text) and ENT_WH.COACH_NOTES_WORKFLOW_DM (questions 502599, 502616 for disease management).")
 dd_entry(dd2_tf, "Goals", "SCP.AH_MEMBER_ACTION – ActionType 2 (Coach-Created) and ActionType 3 (System-Recommended). Status reflects the current snapshot as of the data refresh date, not historical progression.")
 dd_entry(dd2_tf, "Member Identity", "All member counts use CURRENTGUID as the canonical identifier to correctly handle GUID shifts. GUID resolution performed via ENT_WH.ELIGMEMBER.")

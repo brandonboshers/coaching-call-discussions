@@ -16,7 +16,7 @@ This report captures what happens during coaching calls: what topics are discuss
 
 ## How Topics Are Assigned
 
-The report starts from **every successful outbound coaching call**. For each call, we determine the discussion topic using a priority system. The first tier that produces a result wins:
+The report starts from **coaching calls only** — successful outbound calls during an active enrollment period (`LEVEL_NAME = 'Enrolled'`). Engagement/outreach calls are excluded because they are scheduling or administrative contacts, not coaching discussions. For each qualifying call, we determine the discussion topic using a priority system. The first tier that produces a result wins:
 
 ```
 Call comes in
@@ -201,7 +201,13 @@ Topic recording was introduced in mid-2021. Before that, all calls show as "Gene
 
 ### Call Filtering
 
-Only calls that are billable (`PPPY_BILL_ELIG = 'Y'`) or interaction-eligible (`INTERACTION_ELIG = 'Y'`) per the CALLTYPE_XREF_VW lookup are included. This keeps the denominator aligned with standard coaching metrics and removes noise from administrative call types.
+Only calls that meet ALL of the following criteria are included:
+
+1. **Billable or interaction-eligible** (`PPPY_BILL_ELIG = 'Y'` or `INTERACTION_ELIG = 'Y'` per CALLTYPE_XREF_VW)
+2. **During active enrollment** — the call date must fall within a `LEVEL_NAME = 'Enrolled'` period in COACHING_ENROLLMENT_MODEL
+3. **Not an Engagement call** — calls with call type "Engagement" are excluded because they are outreach/scheduling contacts, not coaching discussions
+
+This means the report only reflects actual coaching conversations (Lifestyle, Clinical, Dietary Referral, Tobacco call types) with formally enrolled members. Pre-enrollment outreach, post-disenrollment follow-ups, and scheduling calls are excluded.
 
 ### Multi-Topic Calls
 
