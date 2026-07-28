@@ -378,42 +378,42 @@ BLANK = prs.slide_layouts[7]
 
 # ===== SLIDE 1: Title =====
 slide = prs.slides.add_slide(BLANK)
-tb = slide.shapes.add_textbox(Inches(0.75), Inches(1.8), Inches(8.5), Inches(2))
+tb = slide.shapes.add_textbox(Inches(0.75), Inches(0.5), Inches(8.5), Inches(1.5))
 tf = tb.text_frame
 tf.word_wrap = True
 p = tf.paragraphs[0]
 p.text = "Coaching Call Discussions"
 p.font.name = FONT_HEADING
-p.font.size = Pt(36)
+p.font.size = Pt(32)
 p.font.color.rgb = COLOR_PRIMARY
 p2 = tf.add_paragraph()
 p2.text = "Monthly Report"
 p2.font.name = FONT_BODY
-p2.font.size = Pt(20)
+p2.font.size = Pt(18)
 p2.font.color.rgb = COLOR_ACCENT
-p2.space_before = Pt(8)
+p2.space_before = Pt(4)
 
-tb2 = slide.shapes.add_textbox(Inches(0.75), Inches(4.2), Inches(8), Inches(0.8))
+tb2 = slide.shapes.add_textbox(Inches(0.75), Inches(1.9), Inches(8), Inches(0.6))
 tf2 = tb2.text_frame
 p3 = tf2.paragraphs[0]
 p3.text = f"{customer_id}  |  {report_month_label}"
 p3.font.name = FONT_BODY
-p3.font.size = Pt(14)
+p3.font.size = Pt(13)
 p3.font.color.rgb = COLOR_DARK
 p4 = tf2.add_paragraph()
 p4.text = f"Report Period: {start_date} to {end_date}  |  L12M: {t12_start} to {t12_end}"
 p4.font.name = FONT_BODY
-p4.font.size = Pt(10)
+p4.font.size = Pt(9)
 p4.font.color.rgb = COLOR_MUTED
 
 # Report description
-tb3 = slide.shapes.add_textbox(Inches(0.75), Inches(5.2), Inches(9), Inches(2.2))
+tb3 = slide.shapes.add_textbox(Inches(0.75), Inches(2.7), Inches(9), Inches(4.5))
 tf3 = tb3.text_frame
 tf3.word_wrap = True
 desc_title = tf3.paragraphs[0]
 desc_title.text = "About This Report"
 desc_title.font.name = FONT_BODY
-desc_title.font.size = Pt(10)
+desc_title.font.size = Pt(11)
 desc_title.font.bold = True
 desc_title.font.color.rgb = COLOR_PRIMARY
 
@@ -502,6 +502,59 @@ add_table(slide, df_goal_dist_combined,
           left=Inches(0.4), top=Inches(2.9),
           width=Inches(9.2), height=Inches(2.4),
           first_col_width=Inches(1.6))
+
+# Dynamic insights
+insights = []
+
+# MoM member trend
+mem_delta = current_members - prior_members
+if mem_delta > 0:
+    insights.append(f"Member engagement increased by {mem_delta:,} members ({abs(mem_delta)*100//max(prior_members,1)}%) from {prior_month_label} to {report_month_label}.")
+elif mem_delta < 0:
+    insights.append(f"Member engagement decreased by {abs(mem_delta):,} members ({abs(mem_delta)*100//max(prior_members,1)}%) from {prior_month_label} to {report_month_label}.")
+else:
+    insights.append(f"Member engagement remained stable between {prior_month_label} and {report_month_label}.")
+
+# Goal completion trend
+comp_delta = current_completed - prior_completed
+if comp_delta > 0:
+    insights.append(f"Goal completions rose by {comp_delta:,} month-over-month, indicating positive momentum in member progress.")
+elif comp_delta < 0:
+    insights.append(f"Goal completions declined by {abs(comp_delta):,} month-over-month. This may reflect seasonal patterns or coaching focus shifts.")
+
+# Not Started dominance
+total_goals_curr = sum(int(df_goal_dist[df_goal_dist['GOAL_STATUS'] == s]['COUNT'].iloc[0]) if len(df_goal_dist[df_goal_dist['GOAL_STATUS'] == s]) > 0 else 0 for s in statuses)
+ns_count = int(df_goal_dist[df_goal_dist['GOAL_STATUS'] == 'Not Started']['COUNT'].iloc[0]) if len(df_goal_dist[df_goal_dist['GOAL_STATUS'] == 'Not Started']) > 0 else 0
+if total_goals_curr > 0:
+    ns_pct = ns_count * 100 // total_goals_curr
+    if ns_pct > 90:
+        insights.append(f"{ns_pct}% of goals are in 'Not Started' status. These are system-recommended goals awaiting member activation — a common pattern for evidence-based goal libraries.")
+
+# Top topic
+if len(df_engagement) > 0:
+    top_topic = df_engagement.iloc[0]['WELLBEING_TOPIC']
+    top_members = int(df_engagement.iloc[0]['MEMBERS'])
+    insights.append(f"'{top_topic}' was the most discussed topic this month with {top_members:,} members, reflecting the primary coaching focus area.")
+
+# Tobacco gap
+tob_part = safe_int(tob_current.get('Tobacco Participants', 0))
+tob_active = safe_int(tob_current.get('Active Tobacco Participants', 0))
+if tob_part > 0 and tob_active < tob_part:
+    gap = tob_part - tob_active
+    insights.append(f"{gap} of {tob_part} tobacco-discussing members ({gap*100//tob_part}%) do not have a formal Tobacco Cessation goal — an opportunity to formalize cessation tracking.")
+
+# Add insights text box
+add_title(slide, "Key Insights", Inches(0.4), Inches(5.5))
+tb_ins = slide.shapes.add_textbox(Inches(0.4), Inches(5.9), Inches(9.2), Inches(1.5))
+tf_ins = tb_ins.text_frame
+tf_ins.word_wrap = True
+for i, insight in enumerate(insights):
+    p_ins = tf_ins.paragraphs[0] if i == 0 else tf_ins.add_paragraph()
+    p_ins.text = f"\u2022  {insight}"
+    p_ins.font.name = FONT_BODY
+    p_ins.font.size = Pt(8)
+    p_ins.font.color.rgb = COLOR_DARK
+    p_ins.space_before = Pt(2)
 
 
 # ===== SLIDE 3: Coaching Engagement by Wellbeing Topic =====
