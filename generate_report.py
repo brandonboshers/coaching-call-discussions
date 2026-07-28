@@ -554,19 +554,19 @@ add_kpi_box(slide, "L12M Tobacco Participants", tob_t12_count,
 y_pos2 = Inches(2.3)
 
 add_kpi_box(slide, f"{report_month_label} Members", f"{current_members:,}",
-            r90_avg=f"{report_month_label}: {current_members:,}", p90_avg=f"{prior_month_label}: {prior_members:,}",
+            r90_avg=f"{current_members:,}", p90_avg=f"{prior_month_label}: {prior_members:,}",
             delta=current_members - prior_members,
             delta_label="vs prior month",
             left=x_start, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, f"{report_month_label} Goals Completed", f"{current_completed:,}",
-            r90_avg=f"{report_month_label}: {current_completed:,}", p90_avg=f"{prior_month_label}: {prior_completed:,}",
+            r90_avg=f"{current_completed:,}", p90_avg=f"{prior_month_label}: {prior_completed:,}",
             delta=current_completed - prior_completed,
             delta_label="vs prior month",
             left=x_start + spacing, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, f"{report_month_label} Tobacco", tob_current_count,
-            r90_avg=f"{report_month_label}: {tob_current_count}", p90_avg=f"{prior_month_label}: {tob_prior.get('Tobacco Participants', '0')}",
+            r90_avg=f"{tob_current_count}", p90_avg=f"{prior_month_label}: {tob_prior.get('Tobacco Participants', '0')}",
             delta=safe_int(tob_current_count) - safe_int(tob_prior.get('Tobacco Participants', 0)),
             delta_label="vs prior month",
             left=x_start + spacing * 2, top=y_pos2, width=kpi_width, height=Inches(1.2))
