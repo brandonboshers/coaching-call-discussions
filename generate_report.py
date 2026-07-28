@@ -413,11 +413,12 @@ desc_title.font.bold = True
 desc_title.font.color.rgb = COLOR_PRIMARY
 
 desc_lines = [
-    "This report summarizes coaching call discussion topics, member goals, and tobacco engagement.",
-    "Topics are assigned using a tiered system: direct coach selection, keyword inference from notes, call type, or prior topic carryforward.",
-    "Goals reflect the current status of formal coaching goals in the platform (Not Started, In Progress, Completed, Withdrawn).",
-    "Tobacco Participants are members who discussed tobacco at any point during coaching; Active Tobacco Participants also have a formal Tobacco Cessation goal.",
-    "All metrics include current month, prior month comparison, and year-to-date totals.",
+    "This report covers members who had at least one successful outbound coaching call during the report period. Members without calls are not included.",
+    "Each call is assigned a single wellbeing topic using a tiered approach: (1) direct coach selection on the call form, (2) keyword inference from coach notes, (3) call type (e.g., Tobacco, Dietary Referral), or (4) the member's most recent prior topic within 180 days.",
+    "Calls that cannot be classified by any tier are labeled 'General.' Goals that don't match a known domain keyword are labeled 'Other.'",
+    "Goals reflect the current snapshot from the coaching platform. A member's goal status (Not Started, In Progress, Completed, Withdrawn) is their status as of the refresh date, not necessarily within the report period.",
+    "Tobacco Participants are members who discussed tobacco at any point during their coaching history and had a call in the report period. Active Tobacco Participants are the subset who also have a formal Tobacco Cessation goal.",
+    "All metrics include current month, prior month comparison (MoM Change), and year-to-date (YTD) totals for trend visibility.",
 ]
 for line in desc_lines:
     p = tf3.add_paragraph()
