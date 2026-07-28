@@ -419,19 +419,39 @@ add_kpi_box(slide, "Tobacco Participants", tob_current.get('Tobacco Participants
             delta=safe_int(tob_current.get('Tobacco Participants', 0)) - safe_int(tob_prior.get('Tobacco Participants', 0)),
             left=x_start + spacing * 3, top=y_pos, width=kpi_width)
 
-# Goal Status Distribution below KPIs
+# Goal Status Distribution — combined table with MoM and YTD
 add_title(slide, "Goal Status Distribution", Inches(0.4), Inches(2.4))
-add_table(slide, df_goal_dist,
-          left=Inches(0.4), top=Inches(2.9),
-          width=Inches(4.5), height=Inches(2.2),
-          pct_cols=['GOAL_PCT'])
 
-# YTD Goal Status (right side)
-add_title(slide, f"YTD Goal Status ({ytd_start[:4]})", Inches(5.2), Inches(2.4))
-add_table(slide, df_goal_dist_ytd,
-          left=Inches(5.2), top=Inches(2.9),
-          width=Inches(4.5), height=Inches(2.2),
-          pct_cols=['GOAL_PCT'])
+# Build combined DataFrame
+statuses = ['Completed', 'In Progress', 'Not Started', 'Withdrawn']
+combined_rows = []
+for status in statuses:
+    curr_row = df_goal_dist[df_goal_dist['GOAL_STATUS'] == status]
+    prior_row = df_goal_dist_prior[df_goal_dist_prior['GOAL_STATUS'] == status]
+    ytd_row = df_goal_dist_ytd[df_goal_dist_ytd['GOAL_STATUS'] == status]
+
+    curr_count = int(curr_row['COUNT'].iloc[0]) if len(curr_row) > 0 else 0
+    curr_pct = float(curr_row['GOAL_PCT'].iloc[0]) if len(curr_row) > 0 else 0.0
+    prior_count = int(prior_row['COUNT'].iloc[0]) if len(prior_row) > 0 else 0
+    ytd_count = int(ytd_row['COUNT'].iloc[0]) if len(ytd_row) > 0 else 0
+    ytd_pct = float(ytd_row['GOAL_PCT'].iloc[0]) if len(ytd_row) > 0 else 0.0
+    mom_change = curr_count - prior_count
+
+    combined_rows.append({
+        'Goal Status': status,
+        f'{report_month_label}': curr_count,
+        '%': f"{curr_pct}%",
+        f'{prior_month_label}': prior_count,
+        'MoM Change': f"+{mom_change}" if mom_change > 0 else str(mom_change),
+        'YTD': ytd_count,
+        'YTD %': f"{ytd_pct}%"
+    })
+
+df_goal_dist_combined = pd.DataFrame(combined_rows)
+add_table(slide, df_goal_dist_combined,
+          left=Inches(0.4), top=Inches(2.9),
+          width=Inches(9.2), height=Inches(2.4),
+          first_col_width=Inches(1.6))
 
 
 # ===== SLIDE 3: Coaching Engagement by Wellbeing Topic =====
