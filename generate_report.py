@@ -575,6 +575,56 @@ add_table(slide, df_tobacco_combined,
           width=Inches(9.4), height=Inches(2.5),
           first_col_width=Inches(2.8))
 
+# Definitions and gap analysis
+tob_participants = safe_int(tob_current.get('Tobacco Participants', 0))
+tob_active = safe_int(tob_current.get('Active Tobacco Participants', 0))
+tob_gap = tob_participants - tob_active
+gap_pct = round(tob_gap * 100.0 / max(tob_participants, 1), 1)
+
+tb = slide.shapes.add_textbox(Inches(0.3), Inches(3.3), Inches(9.4), Inches(2.0))
+tf = tb.text_frame
+tf.word_wrap = True
+
+p = tf.paragraphs[0]
+p.text = "Definitions"
+p.font.name = FONT_BODY
+p.font.size = Pt(10)
+p.font.bold = True
+p.font.color.rgb = COLOR_PRIMARY
+
+p2 = tf.add_paragraph()
+p2.text = "Tobacco Participants: Members who discussed tobacco during a coaching call (topic form selection or Tobacco call type)"
+p2.font.name = FONT_BODY
+p2.font.size = Pt(9)
+p2.font.color.rgb = COLOR_DARK
+p2.space_before = Pt(4)
+
+p3 = tf.add_paragraph()
+p3.text = "Active Tobacco Participants: Subset with a formal Tobacco Cessation goal in the system (status: In Progress or Not Started)"
+p3.font.name = FONT_BODY
+p3.font.size = Pt(9)
+p3.font.color.rgb = COLOR_DARK
+p3.space_before = Pt(2)
+
+p4 = tf.add_paragraph()
+p4.text = ""
+p4.space_before = Pt(10)
+
+p5 = tf.add_paragraph()
+p5.text = "Goal Coverage Gap"
+p5.font.name = FONT_BODY
+p5.font.size = Pt(10)
+p5.font.bold = True
+p5.font.color.rgb = COLOR_PRIMARY
+p5.space_before = Pt(6)
+
+p6 = tf.add_paragraph()
+p6.text = f"{tob_gap} of {tob_participants} tobacco participants ({gap_pct}%) discussed tobacco in coaching but do not have a formal Tobacco Cessation goal set. These members may have goals in other domains (Exercise, Condition Management, etc.) but no tobacco-specific goal is being tracked."
+p6.font.name = FONT_BODY
+p6.font.size = Pt(9)
+p6.font.color.rgb = COLOR_DARK
+p6.space_before = Pt(4)
+
 
 # --- Save ---
 period_str = f"{start_date.replace('-', '')}_{end_date.replace('-', '')}"
