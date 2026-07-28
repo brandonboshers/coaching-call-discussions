@@ -229,6 +229,63 @@ with get_connection() as conn:
     df_goal_prog_r90 = query_goal_prog(conn, r90_start, r90_end_str)
     df_goal_prog_p90 = query_goal_prog(conn, p90_start, p90_end)
 
+    # Classic summary tables (L12M window for the overview slide)
+    df_topics_classic = pd.read_sql(f"""
+        SELECT REPORT_TOPIC AS CALL_TOPIC,
+            COUNT(DISTINCT CURRENTGUID) AS MEMBERS,
+            ROUND(COUNT(DISTINCT CURRENTGUID)*100.0/NULLIFZERO(TOTALS.TOTAL_MEMBERS),2) AS PCT_MEMBERS,
+            COUNT(*) AS CALLS,
+            ROUND(COUNT(*)*100.0/NULLIFZERO(TOTALS.TOTAL_CALLS),2) AS PCT_OF_CALLS
+        FROM Carefirst_Sandbox.COACHING_CALL_TOPICS T
+        CROSS JOIN (
+            SELECT COUNT(DISTINCT CURRENTGUID) AS TOTAL_MEMBERS, COUNT(*) AS TOTAL_CALLS
+            FROM Carefirst_Sandbox.COACHING_CALL_TOPICS WHERE {build_filter(start=t12_start, end=t12_end)}
+        ) TOTALS
+        WHERE {build_filter('T', start=t12_start, end=t12_end)}
+        GROUP BY 1, TOTALS.TOTAL_MEMBERS, TOTALS.TOTAL_CALLS
+        ORDER BY 4 DESC
+    """, conn)
+
+    df_tobacco_classic = pd.read_sql(f"""
+        SELECT 'Yes' AS TOBACCO_DISCUSSED, COUNT(DISTINCT T.CURRENTGUID) AS MEMBERS,
+            ROUND(COUNT(DISTINCT T.CURRENTGUID)*100.0/NULLIFZERO(TOTALS.TOTAL_MEMBERS),2) AS PCT_MEMBERS,
+            COUNT(*) AS CALLS,
+            ROUND(COUNT(*)*100.0/NULLIFZERO(TOTALS.TOTAL_CALLS),2) AS PCT_OF_CALLS
+        FROM Carefirst_Sandbox.COACHING_CALL_TOPICS T
+        JOIN Carefirst_Sandbox.COACHING_CALL_TOBACCO TB ON T.CURRENTGUID = TB.CURRENTGUID
+        CROSS JOIN (SELECT COUNT(DISTINCT CURRENTGUID) AS TOTAL_MEMBERS, COUNT(*) AS TOTAL_CALLS
+            FROM Carefirst_Sandbox.COACHING_CALL_TOPICS WHERE {build_filter(start=t12_start, end=t12_end)}) TOTALS
+        WHERE {build_filter('T', start=t12_start, end=t12_end)}
+        GROUP BY 1, TOTALS.TOTAL_MEMBERS, TOTALS.TOTAL_CALLS
+        UNION ALL
+        SELECT 'No', COUNT(DISTINCT T.CURRENTGUID),
+            ROUND(COUNT(DISTINCT T.CURRENTGUID)*100.0/NULLIFZERO(TOTALS.TOTAL_MEMBERS),2),
+            COUNT(*), ROUND(COUNT(*)*100.0/NULLIFZERO(TOTALS.TOTAL_CALLS),2)
+        FROM Carefirst_Sandbox.COACHING_CALL_TOPICS T
+        CROSS JOIN (SELECT COUNT(DISTINCT CURRENTGUID) AS TOTAL_MEMBERS, COUNT(*) AS TOTAL_CALLS
+            FROM Carefirst_Sandbox.COACHING_CALL_TOPICS WHERE {build_filter(start=t12_start, end=t12_end)}) TOTALS
+        WHERE {build_filter('T', start=t12_start, end=t12_end)}
+          AND T.CURRENTGUID NOT IN (SELECT CURRENTGUID FROM Carefirst_Sandbox.COACHING_CALL_TOBACCO)
+        GROUP BY 1, TOTALS.TOTAL_MEMBERS, TOTALS.TOTAL_CALLS
+    """, conn)
+
+    df_goal_domain_status = pd.read_sql(f"""
+        SELECT G.GOAL_DOMAIN,
+            SUM(CASE WHEN G.GOAL_STATUS='Completed' THEN 1 ELSE 0 END) AS COMPLETED,
+            ROUND(SUM(CASE WHEN G.GOAL_STATUS='Completed' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),1) AS COMP_PCT,
+            SUM(CASE WHEN G.GOAL_STATUS='In Progress' THEN 1 ELSE 0 END) AS IN_PROGRESS,
+            ROUND(SUM(CASE WHEN G.GOAL_STATUS='In Progress' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),1) AS IP_PCT,
+            SUM(CASE WHEN G.GOAL_STATUS='Withdrawn' THEN 1 ELSE 0 END) AS WITHDRAWN,
+            ROUND(SUM(CASE WHEN G.GOAL_STATUS='Withdrawn' THEN 1 ELSE 0 END)*100.0/NULLIFZERO(COUNT(*)),1) AS WD_PCT
+        FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
+        JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
+        WHERE {build_filter('T', start=t12_start, end=t12_end)}
+        GROUP BY 1
+        ORDER BY CASE G.GOAL_DOMAIN WHEN 'Gaps in Care' THEN 1 WHEN 'Exercise' THEN 2 WHEN 'Nutrition' THEN 3
+            WHEN 'Weight Management' THEN 4 WHEN 'Tobacco Cessation' THEN 5 WHEN 'Mental/Behavioral Health' THEN 6
+            WHEN 'Stress Management' THEN 7 WHEN 'Condition Management' THEN 8 ELSE 9 END
+    """, conn)
+
 log.info(f"Data loaded: {len(df_engagement)} topics, {len(df_goal_prog)} domains")
 
 
@@ -788,7 +845,41 @@ p6.font.color.rgb = COLOR_DARK
 p6.space_before = Pt(4)
 
 
-# ===== SLIDE 6: Data Dictionary =====
+# ===== SLIDE 6: Classic Coaching Call Discussions Layout =====
+slide = prs.slides.add_slide(BLANK)
+add_title(slide, "Coaching Call Discussions", Inches(0.3), Inches(0.1), size=16)
+
+# Draw accent line
+line = slide.shapes.add_connector(1, Inches(3.2), Inches(0.4), Inches(9.7), Inches(0.4))
+line.line.color.rgb = COLOR_ACCENT
+line.line.width = Pt(3)
+
+# Topics table (top-left)
+add_title(slide, "Topics", Inches(0.3), Inches(0.5), size=10)
+add_table(slide, df_topics_classic,
+          left=Inches(0.2), top=Inches(0.8),
+          width=Inches(4.8), height=Inches(3.2),
+          first_col_width=Inches(1.6),
+          pct_cols=['PCT_MEMBERS', 'PCT_OF_CALLS'])
+
+# Tobacco table (top-right)
+add_title(slide, "Tobacco", Inches(5.3), Inches(0.5), size=10)
+add_table(slide, df_tobacco_classic,
+          left=Inches(5.2), top=Inches(0.8),
+          width=Inches(4.6), height=Inches(1.0),
+          first_col_width=Inches(1.4),
+          pct_cols=['PCT_MEMBERS', 'PCT_OF_CALLS'])
+
+# Goal Domains & Status (right side, below tobacco)
+add_title(slide, "Goal Domains & Status", Inches(5.3), Inches(2.0), size=10)
+add_table(slide, df_goal_domain_status,
+          left=Inches(5.2), top=Inches(2.3),
+          width=Inches(4.6), height=Inches(4.7),
+          first_col_width=Inches(1.4),
+          pct_cols=['COMP_PCT', 'IP_PCT', 'WD_PCT'])
+
+
+# ===== SLIDE 7: Data Dictionary =====
 slide = prs.slides.add_slide(BLANK)
 add_title(slide, "Data Dictionary", Inches(0.4), Inches(0.2), size=16)
 
