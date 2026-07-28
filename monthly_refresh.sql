@@ -15,6 +15,8 @@
 
 -- =========================================================================
 -- STEP 1A: CALLS - one per account per day, billable types only
+-- Excludes Engagement calls (outreach, not coaching discussions)
+-- Restricts to calls during active enrollment (LEVEL_NAME = 'Enrolled')
 -- =========================================================================
 DROP TABLE IF EXISTS CALLS_ONE_PER_DAY;
 CREATE LOCAL TEMP TABLE CALLS_ONE_PER_DAY ON COMMIT PRESERVE ROWS AS
@@ -36,8 +38,13 @@ FROM (
         FROM ENT_WH.CALLTYPE_XREF_VW
         WHERE PPPY_BILL_ELIG = 'Y' OR INTERACTION_ELIG = 'Y'
     ) CT ON UPPER(TRIM(MC.DESCRIPTION)) = UPPER(CT.CALL_DESC)
+    JOIN ENT_WH.COACHING_ENROLLMENT_MODEL CE
+        ON MC.ACCOUNT = CE.ACCOUNT
+        AND TRUNC(MC.ENCOUNTERDATETIME)::DATE BETWEEN CE.BIEFFECTIVEDATE AND CE.BIENDDATE
+        AND UPPER(CE.LEVEL_NAME) = 'ENROLLED'
     WHERE UPPER(MC.CALL_STATUS) = 'SUCCESSFUL'
       AND UPPER(MC.DIRECTION) = 'OUTBOUND'
+      AND UPPER(TRIM(MC.DESCRIPTION)) != 'ENGAGEMENT'
 ) X WHERE RN = 1;
 
 
