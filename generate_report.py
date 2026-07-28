@@ -326,7 +326,7 @@ def add_table(slide, df, left, top, width, height, pct_cols=None, first_col_widt
 
     # Header
     for c, col_name in enumerate(df.columns):
-        display = col_name.replace('_', ' ').title()
+        display = col_name.replace('_', ' ')
         set_cell(tbl.cell(0, c), display, font_size=8, bold=True,
                  color=COLOR_WHITE, align=PP_ALIGN.CENTER, fill=COLOR_HEADER_BG)
 
