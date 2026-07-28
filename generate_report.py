@@ -265,8 +265,8 @@ def add_table(slide, df, left, top, width, height, pct_cols=None, first_col_widt
                 display_val = f"{val}%"
             else:
                 display_val = val
-            is_num = isinstance(val, (int, float))
-            align = PP_ALIGN.RIGHT if is_num else PP_ALIGN.LEFT
+            # First column left-aligned, all others centered
+            align = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.CENTER
             fill = COLOR_LIGHT_GRAY if r_idx % 2 == 0 else None
             set_cell(cell, display_val, font_size=9, color=COLOR_DARK, align=align, fill=fill)
 
@@ -401,6 +401,32 @@ p4.font.name = FONT_BODY
 p4.font.size = Pt(10)
 p4.font.color.rgb = COLOR_MUTED
 
+# Report description
+tb3 = slide.shapes.add_textbox(Inches(0.75), Inches(5.2), Inches(9), Inches(2.2))
+tf3 = tb3.text_frame
+tf3.word_wrap = True
+desc_title = tf3.paragraphs[0]
+desc_title.text = "About This Report"
+desc_title.font.name = FONT_BODY
+desc_title.font.size = Pt(10)
+desc_title.font.bold = True
+desc_title.font.color.rgb = COLOR_PRIMARY
+
+desc_lines = [
+    "This report summarizes coaching call discussion topics, member goals, and tobacco engagement.",
+    "Topics are assigned using a tiered system: direct coach selection, keyword inference from notes, call type, or prior topic carryforward.",
+    "Goals reflect the current status of formal coaching goals in the platform (Not Started, In Progress, Completed, Withdrawn).",
+    "Tobacco Participants are members who discussed tobacco at any point during coaching; Active Tobacco Participants also have a formal Tobacco Cessation goal.",
+    "All metrics include current month, prior month comparison, and year-to-date totals.",
+]
+for line in desc_lines:
+    p = tf3.add_paragraph()
+    p.text = f"\u2022  {line}"
+    p.font.name = FONT_BODY
+    p.font.size = Pt(8)
+    p.font.color.rgb = COLOR_MUTED
+    p.space_before = Pt(3)
+
 
 # ===== SLIDE 2: Executive Summary KPIs =====
 slide = prs.slides.add_slide(BLANK)
@@ -452,11 +478,11 @@ for status in statuses:
 
     combined_rows.append({
         'Goal Status': status,
-        f'{report_month_label}': curr_count,
+        f'{report_month_label}': f"{curr_count:,}",
         '%': f"{curr_pct:.1f}%",
-        f'{prior_month_label}': prior_count,
-        'MoM Change': f"+{mom_change}" if mom_change > 0 else str(mom_change),
-        'YTD': ytd_count,
+        f'{prior_month_label}': f"{prior_count:,}",
+        'MoM Change': f"+{mom_change:,}" if mom_change > 0 else f"{mom_change:,}",
+        'YTD': f"{ytd_count:,}",
         'YTD %': f"{ytd_pct:.1f}%"
     })
 
