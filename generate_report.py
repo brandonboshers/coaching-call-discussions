@@ -305,7 +305,7 @@ def add_title(slide, text, left, top, size=14):
     return tb
 
 
-def add_kpi_box(slide, label, value, prior_value=None, delta=None, delta_label="vs prior month", r90_avg=None, p90_avg=None, left=Inches(0), top=Inches(0), width=Inches(2.2), height=Inches(1.1)):
+def add_kpi_box(slide, label, value, curr_value=None, prior_value=None, delta=None, delta_label="vs prior month", r90_avg=None, p90_avg=None, left=Inches(0), top=Inches(0), width=Inches(2.2), height=Inches(1.1)):
     """Add a KPI box with monthly comparison and 90-day rolling averages."""
     tb = slide.shapes.add_textbox(left, top, width, height)
     tf = tb.text_frame
@@ -333,7 +333,8 @@ def add_kpi_box(slide, label, value, prior_value=None, delta=None, delta_label="
         p_mom = tf.add_paragraph()
         short_curr = report_month_label.split()[0][:3]
         short_prior = prior_month_label.split()[0][:3]
-        p_mom.text = f"{short_curr}: {value}  |  {short_prior}: {prior_value}"
+        curr_display = curr_value if curr_value is not None else value
+        p_mom.text = f"{short_curr}: {curr_display}  |  {short_prior}: {prior_value}"
         p_mom.font.name = FONT_BODY
         p_mom.font.size = Pt(7)
         p_mom.font.color.rgb = COLOR_MUTED
@@ -499,6 +500,7 @@ r90_avg_completed = round(r90_completed / 3)
 p90_avg_completed = round(p90_completed / 3)
 
 add_kpi_box(slide, "L12M Members Coached", f"{t12_members:,}",
+            curr_value=f"{current_members:,}",
             prior_value=f"{prior_members:,}",
             delta=current_members - prior_members,
             r90_avg=f"{r90_avg_members:,}", p90_avg=f"{p90_avg_members:,}",
@@ -506,6 +508,7 @@ add_kpi_box(slide, "L12M Members Coached", f"{t12_members:,}",
 
 t12_completed = int(df_goal_dist_t12[df_goal_dist_t12['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_t12) > 0 else 0
 add_kpi_box(slide, "L12M Goals Completed", f"{t12_completed:,}",
+            curr_value=f"{current_completed:,}",
             prior_value=f"{prior_completed:,}",
             delta=current_completed - prior_completed,
             r90_avg=f"{r90_avg_completed:,}", p90_avg=f"{p90_avg_completed:,}",
@@ -516,7 +519,10 @@ add_kpi_box(slide, f"{report_month_label} Members", f"{current_members:,}",
             delta=current_members - prior_members,
             left=x_start + spacing * 2, top=y_pos, width=kpi_width, height=Inches(1.6))
 
-add_kpi_box(slide, "L12M Tobacco Participants", tob_t12.get('Tobacco Participants', '0'),
+tob_current_count = tob_current.get('Tobacco Participants', '0')
+tob_t12_count = tob_t12.get('Tobacco Participants', '0')
+add_kpi_box(slide, "L12M Tobacco Participants", tob_t12_count,
+            curr_value=tob_current_count,
             prior_value=tob_prior.get('Tobacco Participants', '0'),
             delta=safe_int(tob_current.get('Tobacco Participants', 0)) - safe_int(tob_prior.get('Tobacco Participants', 0)),
             left=x_start + spacing * 3, top=y_pos, width=kpi_width, height=Inches(1.6))
