@@ -845,41 +845,7 @@ p6.font.color.rgb = COLOR_DARK
 p6.space_before = Pt(4)
 
 
-# ===== SLIDE 6: Classic Coaching Call Discussions Layout =====
-slide = prs.slides.add_slide(BLANK)
-add_title(slide, "Coaching Call Discussions", Inches(0.3), Inches(0.1), size=16)
-
-# Draw accent line
-line = slide.shapes.add_connector(1, Inches(3.2), Inches(0.4), Inches(9.7), Inches(0.4))
-line.line.color.rgb = COLOR_ACCENT
-line.line.width = Pt(3)
-
-# Topics table (top-left)
-add_title(slide, "Topics", Inches(0.3), Inches(0.5), size=10)
-add_table(slide, df_topics_classic,
-          left=Inches(0.2), top=Inches(0.8),
-          width=Inches(4.8), height=Inches(3.2),
-          first_col_width=Inches(1.6),
-          pct_cols=['PCT_MEMBERS', 'PCT_OF_CALLS'])
-
-# Tobacco table (top-right)
-add_title(slide, "Tobacco", Inches(5.3), Inches(0.5), size=10)
-add_table(slide, df_tobacco_classic,
-          left=Inches(5.2), top=Inches(0.8),
-          width=Inches(4.6), height=Inches(1.0),
-          first_col_width=Inches(1.4),
-          pct_cols=['PCT_MEMBERS', 'PCT_OF_CALLS'])
-
-# Goal Domains & Status (right side, below tobacco)
-add_title(slide, "Goal Domains & Status", Inches(5.3), Inches(2.0), size=10)
-add_table(slide, df_goal_domain_status,
-          left=Inches(5.2), top=Inches(2.3),
-          width=Inches(4.6), height=Inches(4.7),
-          first_col_width=Inches(1.4),
-          pct_cols=['COMP_PCT', 'IP_PCT', 'WD_PCT'])
-
-
-# ===== SLIDE 7: Data Dictionary =====
+# ===== SLIDE 6: Data Dictionary =====
 slide = prs.slides.add_slide(BLANK)
 add_title(slide, "Data Dictionary", Inches(0.4), Inches(0.2), size=16)
 
