@@ -264,6 +264,10 @@ def add_table(slide, df, left, top, width, height, pct_cols=None, first_col_widt
             cell = tbl.cell(r_idx + 1, c)
             if pct_cols and df.columns[c] in pct_cols and val is not None:
                 display_val = f"{val}%"
+            elif isinstance(val, (int,)):
+                display_val = f"{val:,}"
+            elif isinstance(val, float) and val == int(val):
+                display_val = f"{int(val):,}"
             else:
                 display_val = val
             # First column left-aligned, all others centered
