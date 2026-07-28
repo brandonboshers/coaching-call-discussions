@@ -410,7 +410,7 @@ def add_kpi_box(slide, label, value, curr_value=None, prior_value=None, delta=No
     # 90-day rolling average line
     if r90_avg is not None and p90_avg is not None:
         p4 = tf.add_paragraph()
-        p4.text = f"90d Avg: {r90_avg}  |  Prior 90d: {p90_avg}"
+        p4.text = f"{r90_avg}  |  {p90_avg}"
         p4.font.name = FONT_BODY
         p4.font.size = Pt(7)
         p4.font.color.rgb = COLOR_MUTED
@@ -499,35 +499,6 @@ p4.font.name = FONT_BODY
 p4.font.size = Pt(9)
 p4.font.color.rgb = COLOR_MUTED
 
-# Report description
-tb3 = slide.shapes.add_textbox(Inches(0.75), Inches(2.7), Inches(9), Inches(4.5))
-tf3 = tb3.text_frame
-tf3.word_wrap = True
-desc_title = tf3.paragraphs[0]
-desc_title.text = "About This Report"
-desc_title.font.name = FONT_BODY
-desc_title.font.size = Pt(11)
-desc_title.font.bold = True
-desc_title.font.color.rgb = COLOR_PRIMARY
-
-desc_lines = [
-    "Population: This report includes all members who completed at least one successful outbound coaching call within the reporting window. Members without coaching activity are excluded from all metrics.",
-    "Wellbeing Topics: Each coaching call is assigned a single discussion topic. Topics are determined by the coach's direct selection on the call workflow form. When no selection is made, the system infers the topic from coach notes, call type classification, or the member's most recently documented topic (within 180 days). Calls with no determinable topic are classified as 'General.'",
-    "Goal Domains: Coaching goals are categorized into 11 wellbeing domains (e.g., Exercise, Nutrition, Condition Management). Goals using standard prefix-based naming are mapped directly; goals with descriptive sentence names are classified using keyword matching. Goals that do not match a recognized domain are reported as 'Other.'",
-    "Goal Status: Reflects the current state of each goal in the coaching platform as of the data refresh date. 'Not Started' indicates a goal has been created but the member has not yet begun working toward it. 'In Progress' indicates active engagement. 'Completed' indicates the goal was achieved. 'Withdrawn' indicates the goal was abandoned or declined.",
-    "Tobacco Focus: 'Tobacco Participants' identifies members who discussed tobacco cessation during any coaching interaction in their history and were active in the reporting period. 'Active Tobacco Participants' is the subset who additionally have a formal Tobacco Cessation goal being tracked in the system.",
-    "Timeframes: The primary view uses a trailing 12-month window (L12M) to provide a comprehensive view of coaching engagement patterns. Current month and prior month columns are included for month-over-month trend analysis. MoM Change reflects the net difference between the current and prior reporting months.",
-    "Data Sources: Coaching calls from BI_REPORTING.MEMBER_CALL_DATA (billable/interaction-eligible types only). Discussion topics from ENT_WH.COACH_NOTES_WORKFLOW. Goals from SCP.AH_MEMBER_ACTION. All data is refreshed monthly on the 1st.",
-]
-for line in desc_lines:
-    p = tf3.add_paragraph()
-    p.text = f"\u2022  {line}"
-    p.font.name = FONT_BODY
-    p.font.size = Pt(8)
-    p.font.color.rgb = COLOR_MUTED
-    p.space_before = Pt(3)
-
-
 # ===== SLIDE 2: Executive Summary KPIs =====
 slide = prs.slides.add_slide(BLANK)
 add_title(slide, "Executive Summary", Inches(0.4), Inches(0.2), size=16)
@@ -561,41 +532,41 @@ tob_r90 = safe_int(tob_current_count)
 tob_p90 = safe_int(tob_prior.get('Tobacco Participants', 0))
 
 add_kpi_box(slide, "L12M Members Coached", f"{t12_members:,}",
-            r90_avg=f"{r90_avg_members:,}", p90_avg=f"{p90_avg_members:,}",
+            r90_avg=f"90d Avg: {r90_avg_members:,}", p90_avg=f"Prior 90d: {p90_avg_members:,}",
             delta=r90_avg_members - p90_avg_members,
             delta_label="vs prior 90d",
             left=x_start, top=y_pos, width=kpi_width, height=Inches(1.2))
 
 t12_completed = int(df_goal_dist_t12[df_goal_dist_t12['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_t12) > 0 else 0
 add_kpi_box(slide, "L12M Goals Completed", f"{t12_completed:,}",
-            r90_avg=f"{r90_avg_completed:,}", p90_avg=f"{p90_avg_completed:,}",
+            r90_avg=f"90d Avg: {r90_avg_completed:,}", p90_avg=f"Prior 90d: {p90_avg_completed:,}",
             delta=r90_avg_completed - p90_avg_completed,
             delta_label="vs prior 90d",
             left=x_start + spacing, top=y_pos, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, "L12M Tobacco Participants", tob_t12_count,
-            r90_avg=f"{tob_r90:,}", p90_avg=f"{tob_p90:,}",
+            r90_avg=f"90d Avg: {tob_r90:,}", p90_avg=f"Prior 90d: {tob_p90:,}",
             delta=tob_r90 - tob_p90,
             delta_label="vs prior 90d",
             left=x_start + spacing * 2, top=y_pos, width=kpi_width, height=Inches(1.2))
 
-# KPI row 2 — 3 Monthly KPIs (same structure: value, label, 90d line, delta)
+# KPI row 2 — 3 Monthly KPIs (same structure: value, label, prior month line, delta)
 y_pos2 = Inches(2.3)
 
 add_kpi_box(slide, f"{report_month_label} Members", f"{current_members:,}",
-            r90_avg=f"{current_members:,}", p90_avg=f"{prior_members:,}",
+            r90_avg=f"{report_month_label}: {current_members:,}", p90_avg=f"{prior_month_label}: {prior_members:,}",
             delta=current_members - prior_members,
             delta_label="vs prior month",
             left=x_start, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, f"{report_month_label} Goals Completed", f"{current_completed:,}",
-            r90_avg=f"{current_completed:,}", p90_avg=f"{prior_completed:,}",
+            r90_avg=f"{report_month_label}: {current_completed:,}", p90_avg=f"{prior_month_label}: {prior_completed:,}",
             delta=current_completed - prior_completed,
             delta_label="vs prior month",
             left=x_start + spacing, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, f"{report_month_label} Tobacco", tob_current_count,
-            r90_avg=tob_current_count, p90_avg=tob_prior.get('Tobacco Participants', '0'),
+            r90_avg=f"{report_month_label}: {tob_current_count}", p90_avg=f"{prior_month_label}: {tob_prior.get('Tobacco Participants', '0')}",
             delta=safe_int(tob_current_count) - safe_int(tob_prior.get('Tobacco Participants', 0)),
             delta_label="vs prior month",
             left=x_start + spacing * 2, top=y_pos2, width=kpi_width, height=Inches(1.2))
@@ -797,13 +768,42 @@ p6.space_before = Pt(4)
 slide = prs.slides.add_slide(BLANK)
 add_title(slide, "Data Dictionary", Inches(0.4), Inches(0.2), size=16)
 
-# Draw accent line under title (like the PDF example)
+# Draw accent line under title
 from pptx.util import Cm
 line = slide.shapes.add_connector(1, Inches(0.4), Inches(0.55), Inches(9.6), Inches(0.55))
 line.line.color.rgb = COLOR_ACCENT
 line.line.width = Pt(3)
 
-dd_tb = slide.shapes.add_textbox(Inches(0.4), Inches(0.7), Inches(9.2), Inches(6.5))
+# About This Report section
+about_tb = slide.shapes.add_textbox(Inches(0.4), Inches(0.7), Inches(9.2), Inches(3.5))
+about_tf = about_tb.text_frame
+about_tf.word_wrap = True
+
+about_title = about_tf.paragraphs[0]
+about_title.text = "About This Report"
+about_title.font.name = FONT_BODY
+about_title.font.size = Pt(10)
+about_title.font.bold = True
+about_title.font.color.rgb = COLOR_PRIMARY
+
+about_lines = [
+    "Population: This report includes all members who completed at least one successful outbound coaching call within the reporting window. Members without coaching activity are excluded from all metrics.",
+    "Wellbeing Topics: Each coaching call is assigned a single discussion topic. Topics are determined by the coach's direct selection on the call workflow form. When no selection is made, the system infers the topic from coach notes, call type classification, or the member's most recently documented topic (within 180 days). Calls with no determinable topic are classified as 'General.'",
+    "Goal Domains: Coaching goals are categorized into 11 wellbeing domains (e.g., Exercise, Nutrition, Condition Management). Goals using standard prefix-based naming are mapped directly; goals with descriptive sentence names are classified using keyword matching. Goals that do not match a recognized domain are reported as 'Other.'",
+    "Goal Status: Reflects the current state of each goal in the coaching platform as of the data refresh date. 'Not Started' indicates a goal has been created but the member has not yet begun working toward it. 'In Progress' indicates active engagement. 'Completed' indicates the goal was achieved. 'Withdrawn' indicates the goal was abandoned or declined.",
+    "Tobacco Focus: 'Tobacco Participants' identifies members who discussed tobacco cessation during any coaching interaction in their history and were active in the reporting period. 'Active Tobacco Participants' is the subset who additionally have a formal Tobacco Cessation goal being tracked in the system.",
+    "Timeframes: The primary view uses a trailing 12-month window (L12M) to provide a comprehensive view of coaching engagement patterns. Current month and prior month columns are included for month-over-month trend analysis. MoM Change reflects the net difference between the current and prior reporting months.",
+    "Data Sources: Coaching calls from ENT_WH.MEMBER_CALL_DATA (billable/interaction-eligible types only). Discussion topics from ENT_WH.COACH_NOTES_WORKFLOW. Goals from SCP.AH_MEMBER_ACTION. All data is refreshed monthly on the 1st.",
+]
+for aline in about_lines:
+    p = about_tf.add_paragraph()
+    p.text = f"\u2022  {aline}"
+    p.font.name = FONT_BODY
+    p.font.size = Pt(7)
+    p.font.color.rgb = COLOR_DARK
+    p.space_before = Pt(2)
+
+dd_tb = slide.shapes.add_textbox(Inches(0.4), Inches(4.3), Inches(9.2), Inches(3.0))
 dd_tf = dd_tb.text_frame
 dd_tf.word_wrap = True
 
