@@ -545,12 +545,12 @@ slide = prs.slides.add_slide(BLANK)
 add_title(slide, "Tobacco Coaching Focus", Inches(0.4), Inches(0.2))
 
 # Build combined tobacco table with month names
-tob_metrics = ['Tobacco Participants', 'Active Tobacco Participants', 'Goals Completed', 'Goals In Progress', 'Completion Rate']
+tob_metrics = ['Tobacco Participants\u00b9', 'Active Tobacco Participants\u00b2', 'Goals Completed', 'Goals In Progress', 'Completion Rate']
 tobacco_combined_rows = []
 for metric in tob_metrics:
-    curr_val = tob_current.get(metric, '0')
-    prior_val = tob_prior.get(metric, '0')
-    ytd_val = tob_ytd.get(metric, '0')
+    curr_val = tob_current.get(metric.rstrip('\u00b9\u00b2'), '0')
+    prior_val = tob_prior.get(metric.rstrip('\u00b9\u00b2'), '0')
+    ytd_val = tob_ytd.get(metric.rstrip('\u00b9\u00b2'), '0')
 
     # Compute MoM change (skip for Completion Rate)
     if metric != 'Completion Rate':
@@ -593,14 +593,14 @@ p.font.bold = True
 p.font.color.rgb = COLOR_PRIMARY
 
 p2 = tf.add_paragraph()
-p2.text = "Tobacco Participants: Members who discussed tobacco during a coaching call (topic form selection or Tobacco call type)"
+p2.text = "\u00b9 Tobacco Participants: Members who discussed tobacco during a coaching call (topic form selection or Tobacco call type)"
 p2.font.name = FONT_BODY
 p2.font.size = Pt(9)
 p2.font.color.rgb = COLOR_DARK
 p2.space_before = Pt(4)
 
 p3 = tf.add_paragraph()
-p3.text = "Active Tobacco Participants: Subset with a formal Tobacco Cessation goal in the system (status: In Progress or Not Started)"
+p3.text = "\u00b2 Active Tobacco Participants: Subset with a formal Tobacco Cessation goal in the system (status: In Progress or Not Started)"
 p3.font.name = FONT_BODY
 p3.font.size = Pt(9)
 p3.font.color.rgb = COLOR_DARK
