@@ -3,7 +3,7 @@ Coaching Call Discussions — Monthly PowerPoint Report Generator
 
 Produces a professional branded report with:
   - Current month metrics
-  - Year-to-date (YTD) totals
+  - Year-to-date (L12M) totals
   - Month-over-month (MoM) comparisons with delta indicators
 
 Usage:
@@ -63,16 +63,17 @@ if not start_date:
 elif not end_date:
     end_date = date.today().strftime('%Y-%m-%d')
 
-# Compute prior month and YTD ranges
+# Compute prior month and trailing 12-month ranges
 report_start = datetime.strptime(start_date, '%Y-%m-%d').date()
 report_end = datetime.strptime(end_date, '%Y-%m-%d').date()
 prior_month_start = (report_start - relativedelta(months=1)).strftime('%Y-%m-%d')
 prior_month_end = (report_start - relativedelta(days=1)).strftime('%Y-%m-%d')
-ytd_start = f"{report_start.year}-01-01"
-ytd_end = end_date
+t12_start = (report_start - relativedelta(months=11)).strftime('%Y-%m-%d')
+t12_end = end_date
 
 report_month_label = report_start.strftime('%B %Y')
 prior_month_label = (report_start - relativedelta(months=1)).strftime('%B %Y')
+t12_label = f"Last 12 Months"
 
 
 def build_filter(table_alias='', start=None, end=None, date_col='CALL_DATE'):
@@ -92,7 +93,7 @@ def build_filter(table_alias='', start=None, end=None, date_col='CALL_DATE'):
 log.info(f"Customer: {customer_id}")
 log.info(f"Report month: {report_month_label} ({start_date} to {end_date})")
 log.info(f"Prior month: {prior_month_label} ({prior_month_start} to {prior_month_end})")
-log.info(f"YTD: {ytd_start} to {ytd_end}")
+log.info(f"L12M: {t12_start} to {t12_end}")
 
 
 def query_engagement(conn, start, end):
@@ -207,11 +208,11 @@ with get_connection() as conn:
     df_goal_dist_prior = query_goal_dist(conn, prior_month_start, prior_month_end)
     df_tobacco_prior = query_tobacco(conn, prior_month_start, prior_month_end)
 
-    # YTD
-    df_engagement_ytd = query_engagement(conn, ytd_start, ytd_end)
-    df_goal_dist_ytd = query_goal_dist(conn, ytd_start, ytd_end)
-    df_goal_prog_ytd = query_goal_prog(conn, ytd_start, ytd_end)
-    df_tobacco_ytd = query_tobacco(conn, ytd_start, ytd_end)
+    # L12M
+    df_engagement_t12 = query_engagement(conn, t12_start, t12_end)
+    df_goal_dist_t12 = query_goal_dist(conn, t12_start, t12_end)
+    df_goal_prog_t12 = query_goal_prog(conn, t12_start, t12_end)
+    df_tobacco_t12 = query_tobacco(conn, t12_start, t12_end)
 
 log.info(f"Data loaded: {len(df_engagement)} topics, {len(df_goal_prog)} domains")
 
@@ -334,7 +335,7 @@ def safe_int(val):
 # --- Compute KPIs ---
 current_members = int(df_engagement['MEMBERS'].sum()) if len(df_engagement) > 0 else 0
 prior_members = int(df_engagement_prior['MEMBERS'].sum()) if len(df_engagement_prior) > 0 else 0
-ytd_members = int(df_engagement_ytd['MEMBERS'].sum()) if len(df_engagement_ytd) > 0 else 0
+t12_members = int(df_engagement_t12['MEMBERS'].sum()) if len(df_engagement_t12) > 0 else 0
 
 current_completed = int(df_goal_dist[df_goal_dist['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist) > 0 else 0
 prior_completed = int(df_goal_dist_prior[df_goal_dist_prior['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_prior) > 0 else 0
@@ -357,7 +358,7 @@ def clean_tob_value(val):
 
 tob_current = {k: clean_tob_value(v) for k, v in (df_tobacco.set_index('METRIC')['VALUE'].to_dict().items())} if len(df_tobacco) > 0 else {}
 tob_prior = {k: clean_tob_value(v) for k, v in (df_tobacco_prior.set_index('METRIC')['VALUE'].to_dict().items())} if len(df_tobacco_prior) > 0 else {}
-tob_ytd = {k: clean_tob_value(v) for k, v in (df_tobacco_ytd.set_index('METRIC')['VALUE'].to_dict().items())} if len(df_tobacco_ytd) > 0 else {}
+tob_t12 = {k: clean_tob_value(v) for k, v in (df_tobacco_t12.set_index('METRIC')['VALUE'].to_dict().items())} if len(df_tobacco_t12) > 0 else {}
 
 
 # --- Build presentation ---
@@ -396,7 +397,7 @@ p3.font.name = FONT_BODY
 p3.font.size = Pt(14)
 p3.font.color.rgb = COLOR_DARK
 p4 = tf2.add_paragraph()
-p4.text = f"Report Period: {start_date} to {end_date}  |  YTD: {ytd_start} to {ytd_end}"
+p4.text = f"Report Period: {start_date} to {end_date}  |  L12M: {t12_start} to {t12_end}"
 p4.font.name = FONT_BODY
 p4.font.size = Pt(10)
 p4.font.color.rgb = COLOR_MUTED
@@ -413,12 +414,12 @@ desc_title.font.bold = True
 desc_title.font.color.rgb = COLOR_PRIMARY
 
 desc_lines = [
-    "This report covers members who had at least one successful outbound coaching call during the report period. Members without calls are not included.",
+    "This report covers all members who had at least one successful outbound coaching call last 12 months. Monthly columns show the current and prior month for trend comparison.",
     "Each call is assigned a single wellbeing topic using a tiered approach: (1) direct coach selection on the call form, (2) keyword inference from coach notes, (3) call type (e.g., Tobacco, Dietary Referral), or (4) the member's most recent prior topic within 180 days.",
     "Calls that cannot be classified by any tier are labeled 'General.' Goals that don't match a known domain keyword are labeled 'Other.'",
     "Goals reflect the current snapshot from the coaching platform. A member's goal status (Not Started, In Progress, Completed, Withdrawn) is their status as of the refresh date, not necessarily within the report period.",
     "Tobacco Participants are members who discussed tobacco at any point during their coaching history and had a call in the report period. Active Tobacco Participants are the subset who also have a formal Tobacco Cessation goal.",
-    "All metrics include current month, prior month comparison (MoM Change), and year-to-date (YTD) totals for trend visibility.",
+    "All metrics show L12M as the primary view with current month and prior month for month-over-month (MoM) trend comparison.",
 ]
 for line in desc_lines:
     p = tf3.add_paragraph()
@@ -436,39 +437,44 @@ add_title(slide, "Executive Summary", Inches(0.4), Inches(0.2), size=16)
 # Subtitle
 tb = slide.shapes.add_textbox(Inches(0.4), Inches(0.55), Inches(8), Inches(0.3))
 p = tb.text_frame.paragraphs[0]
-p.text = f"{report_month_label} vs {prior_month_label}"
+p.text = f"Last 12 Months ({t12_start[:4]})  |  Monthly Detail: {report_month_label} vs {prior_month_label}"
 p.font.name = FONT_BODY
 p.font.size = Pt(10)
 p.font.color.rgb = COLOR_MUTED
 
-# KPI row
+# KPI row — L12M primary, current month delta
 x_start = Inches(0.3)
 y_pos = Inches(1.0)
 kpi_width = Inches(2.3)
 spacing = Inches(2.4)
 
-add_kpi_box(slide, "Members Coached", f"{current_members:,}",
+add_kpi_box(slide, "L12M Members Coached", f"{t12_members:,}",
             delta=current_members - prior_members,
             left=x_start, top=y_pos, width=kpi_width)
-add_kpi_box(slide, "Goals Completed", f"{current_completed:,}",
+
+t12_completed = int(df_goal_dist_t12[df_goal_dist_t12['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_t12) > 0 else 0
+add_kpi_box(slide, "L12M Goals Completed", f"{t12_completed:,}",
             delta=current_completed - prior_completed,
             left=x_start + spacing, top=y_pos, width=kpi_width)
-add_kpi_box(slide, "YTD Members", f"{ytd_members:,}",
+
+add_kpi_box(slide, f"{report_month_label} Members", f"{current_members:,}",
+            delta=current_members - prior_members,
             left=x_start + spacing * 2, top=y_pos, width=kpi_width)
-add_kpi_box(slide, "Tobacco Participants", tob_current.get('Tobacco Participants', '0'),
+
+add_kpi_box(slide, "L12M Tobacco Participants", tob_t12.get('Tobacco Participants', '0'),
             delta=safe_int(tob_current.get('Tobacco Participants', 0)) - safe_int(tob_prior.get('Tobacco Participants', 0)),
             left=x_start + spacing * 3, top=y_pos, width=kpi_width)
 
-# Goal Status Distribution — combined table with MoM and YTD
+# Goal Status Distribution — L12M primary, with monthly columns
 add_title(slide, "Goal Status Distribution", Inches(0.4), Inches(2.4))
 
-# Build combined DataFrame
+# Build combined DataFrame — L12M first
 statuses = ['Completed', 'In Progress', 'Not Started', 'Withdrawn']
 combined_rows = []
 for status in statuses:
     curr_row = df_goal_dist[df_goal_dist['GOAL_STATUS'] == status]
     prior_row = df_goal_dist_prior[df_goal_dist_prior['GOAL_STATUS'] == status]
-    ytd_row = df_goal_dist_ytd[df_goal_dist_ytd['GOAL_STATUS'] == status]
+    ytd_row = df_goal_dist_t12[df_goal_dist_t12['GOAL_STATUS'] == status]
 
     curr_count = int(curr_row['COUNT'].iloc[0]) if len(curr_row) > 0 else 0
     curr_pct = float(curr_row['GOAL_PCT'].iloc[0]) if len(curr_row) > 0 else 0.0
@@ -479,12 +485,11 @@ for status in statuses:
 
     combined_rows.append({
         'Goal Status': status,
+        'L12M': f"{ytd_count:,}",
+        'L12M %': f"{ytd_pct:.1f}%",
         f'{report_month_label}': f"{curr_count:,}",
-        '%': f"{curr_pct:.1f}%",
         f'{prior_month_label}': f"{prior_count:,}",
         'MoM Change': f"+{mom_change:,}" if mom_change > 0 else f"{mom_change:,}",
-        'YTD': f"{ytd_count:,}",
-        'YTD %': f"{ytd_pct:.1f}%"
     })
 
 df_goal_dist_combined = pd.DataFrame(combined_rows)
@@ -498,17 +503,17 @@ add_table(slide, df_goal_dist_combined,
 slide = prs.slides.add_slide(BLANK)
 add_title(slide, "Coaching Engagement by Wellbeing Topic", Inches(0.4), Inches(0.2))
 
-# Build combined engagement table with MoM + YTD
+# Build combined engagement table with MoM + L12M
 engagement_combined_rows = []
 all_topics = list(df_engagement['WELLBEING_TOPIC'].unique())
 for topic in all_topics:
     curr = df_engagement[df_engagement['WELLBEING_TOPIC'] == topic]
     prior = df_engagement_prior[df_engagement_prior['WELLBEING_TOPIC'] == topic] if len(df_engagement_prior) > 0 else pd.DataFrame()
-    ytd = df_engagement_ytd[df_engagement_ytd['WELLBEING_TOPIC'] == topic] if len(df_engagement_ytd) > 0 else pd.DataFrame()
+    ytd = df_engagement_t12[df_engagement_t12['WELLBEING_TOPIC'] == topic] if len(df_engagement_t12) > 0 else pd.DataFrame()
 
     curr_members = int(curr['MEMBERS'].iloc[0]) if len(curr) > 0 else 0
     prior_members_val = int(prior['MEMBERS'].iloc[0]) if len(prior) > 0 else 0
-    ytd_members_val = int(ytd['MEMBERS'].iloc[0]) if len(ytd) > 0 else 0
+    t12_members_val = int(ytd['MEMBERS'].iloc[0]) if len(ytd) > 0 else 0
     mom_delta = curr_members - prior_members_val
     curr_pct = float(curr['PCT_OF_MEMBERS'].iloc[0]) if len(curr) > 0 else 0.0
     curr_completed = int(curr['COMPLETED_GOALS'].iloc[0]) if len(curr) > 0 else 0
@@ -516,13 +521,13 @@ for topic in all_topics:
 
     engagement_combined_rows.append({
         'Wellbeing Topic': topic,
-        f'{report_month_label}': curr_members,
+        'L12M Members': f"{t12_members_val:,}",
         '% of Members': f"{curr_pct:.1f}%",
-        f'{prior_month_label}': prior_members_val,
-        'MoM Change': f"+{mom_delta}" if mom_delta > 0 else str(mom_delta),
-        'YTD Members': ytd_members_val,
-        'Completed Goals': curr_completed,
-        'Open Goals': curr_open,
+        f'{report_month_label}': f"{curr_members:,}",
+        f'{prior_month_label}': f"{prior_members_val:,}",
+        'MoM Change': f"+{mom_delta:,}" if mom_delta > 0 else f"{mom_delta:,}",
+        'Completed Goals': f"{curr_completed:,}",
+        'Open Goals': f"{curr_open:,}",
     })
 
 df_engagement_combined = pd.DataFrame(engagement_combined_rows)
@@ -536,28 +541,28 @@ add_table(slide, df_engagement_combined,
 slide = prs.slides.add_slide(BLANK)
 add_title(slide, "Goal Progression by Domain", Inches(0.4), Inches(0.2))
 
-# Build combined goal progression with MoM + YTD
+# Build combined goal progression with MoM + L12M
 prog_combined_rows = []
 all_domains = list(df_goal_prog['GOAL_DOMAIN'].unique()) if len(df_goal_prog) > 0 else []
 for domain in all_domains:
     curr = df_goal_prog[df_goal_prog['GOAL_DOMAIN'] == domain]
-    ytd = df_goal_prog_ytd[df_goal_prog_ytd['GOAL_DOMAIN'] == domain] if len(df_goal_prog_ytd) > 0 else pd.DataFrame()
+    ytd = df_goal_prog_t12[df_goal_prog_t12['GOAL_DOMAIN'] == domain] if len(df_goal_prog_t12) > 0 else pd.DataFrame()
 
     curr_total = int(curr['TOTAL_GOALS'].iloc[0]) if len(curr) > 0 else 0
     curr_completed = int(curr['COMPLETED'].iloc[0]) if len(curr) > 0 else 0
     curr_rate = float(curr['COMPLETION_RATE'].iloc[0]) if len(curr) > 0 else 0.0
     ytd_total = int(ytd['TOTAL_GOALS'].iloc[0]) if len(ytd) > 0 else 0
-    ytd_completed = int(ytd['COMPLETED'].iloc[0]) if len(ytd) > 0 else 0
+    t12_completed = int(ytd['COMPLETED'].iloc[0]) if len(ytd) > 0 else 0
     ytd_rate = float(ytd['COMPLETION_RATE'].iloc[0]) if len(ytd) > 0 else 0.0
 
     prog_combined_rows.append({
         'Goal Domain': domain,
-        f'{report_month_label} Goals': curr_total,
-        f'{report_month_label} Completed': curr_completed,
+        'L12M Goals': f"{ytd_total:,}",
+        'L12M Completed': f"{t12_completed:,}",
+        'L12M Rate': f"{ytd_rate:.1f}%",
+        f'{report_month_label} Goals': f"{curr_total:,}",
+        f'{report_month_label} Completed': f"{curr_completed:,}",
         'Completion Rate': f"{curr_rate:.1f}%",
-        'YTD Goals': ytd_total,
-        'YTD Completed': ytd_completed,
-        'YTD Rate': f"{ytd_rate:.1f}%",
     })
 
 df_prog_combined = pd.DataFrame(prog_combined_rows)
@@ -577,7 +582,7 @@ tobacco_combined_rows = []
 for metric in tob_metrics:
     curr_val = tob_current.get(metric.rstrip('\u00b9\u00b2'), '0')
     prior_val = tob_prior.get(metric.rstrip('\u00b9\u00b2'), '0')
-    ytd_val = tob_ytd.get(metric.rstrip('\u00b9\u00b2'), '0')
+    ytd_val = tob_t12.get(metric.rstrip('\u00b9\u00b2'), '0')
 
     # Compute MoM change (skip for Completion Rate)
     if metric != 'Completion Rate':
@@ -590,10 +595,10 @@ for metric in tob_metrics:
 
     tobacco_combined_rows.append({
         'Metric': metric,
+        'L12M': ytd_val,
         f'{report_month_label}': curr_val,
         f'{prior_month_label}': prior_val,
         'MoM Change': mom_str,
-        'YTD': ytd_val,
     })
 
 df_tobacco_combined = pd.DataFrame(tobacco_combined_rows)
