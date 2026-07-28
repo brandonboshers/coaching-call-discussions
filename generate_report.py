@@ -456,42 +456,75 @@ add_table(slide, df_goal_dist_combined,
 
 # ===== SLIDE 3: Coaching Engagement by Wellbeing Topic =====
 slide = prs.slides.add_slide(BLANK)
-add_title(slide, f"Coaching Engagement by Wellbeing Topic — {report_month_label}", Inches(0.4), Inches(0.2))
-add_table(slide, df_engagement,
-          left=Inches(0.3), top=Inches(0.7),
-          width=Inches(9.4), height=Inches(4.5),
-          pct_cols=['PCT_OF_MEMBERS'],
-          first_col_width=Inches(2.2))
+add_title(slide, "Coaching Engagement by Wellbeing Topic", Inches(0.4), Inches(0.2))
 
-# YTD summary below
-if len(df_engagement_ytd) > 0:
-    add_title(slide, f"YTD Totals ({ytd_start[:4]})", Inches(0.4), Inches(5.4))
-    tb = slide.shapes.add_textbox(Inches(0.4), Inches(5.8), Inches(9), Inches(0.4))
-    p = tb.text_frame.paragraphs[0]
-    ytd_total = int(df_engagement_ytd['MEMBERS'].sum())
-    p.text = f"Total unique members coached YTD: {ytd_total:,}  |  Topics with calls: {len(df_engagement_ytd)}"
-    p.font.name = FONT_BODY
-    p.font.size = Pt(10)
-    p.font.color.rgb = COLOR_MUTED
+# Build combined engagement table with MoM + YTD
+engagement_combined_rows = []
+all_topics = list(df_engagement['WELLBEING_TOPIC'].unique())
+for topic in all_topics:
+    curr = df_engagement[df_engagement['WELLBEING_TOPIC'] == topic]
+    prior = df_engagement_prior[df_engagement_prior['WELLBEING_TOPIC'] == topic] if len(df_engagement_prior) > 0 else pd.DataFrame()
+    ytd = df_engagement_ytd[df_engagement_ytd['WELLBEING_TOPIC'] == topic] if len(df_engagement_ytd) > 0 else pd.DataFrame()
+
+    curr_members = int(curr['MEMBERS'].iloc[0]) if len(curr) > 0 else 0
+    prior_members_val = int(prior['MEMBERS'].iloc[0]) if len(prior) > 0 else 0
+    ytd_members_val = int(ytd['MEMBERS'].iloc[0]) if len(ytd) > 0 else 0
+    mom_delta = curr_members - prior_members_val
+    curr_pct = float(curr['PCT_OF_MEMBERS'].iloc[0]) if len(curr) > 0 else 0.0
+    curr_completed = int(curr['COMPLETED_GOALS'].iloc[0]) if len(curr) > 0 else 0
+    curr_open = int(curr['OPEN_GOALS'].iloc[0]) if len(curr) > 0 else 0
+
+    engagement_combined_rows.append({
+        'Wellbeing Topic': topic,
+        f'{report_month_label}': curr_members,
+        '% of Members': f"{curr_pct}%",
+        f'{prior_month_label}': prior_members_val,
+        'MoM Change': f"+{mom_delta}" if mom_delta > 0 else str(mom_delta),
+        'YTD Members': ytd_members_val,
+        'Completed Goals': curr_completed,
+        'Open Goals': curr_open,
+    })
+
+df_engagement_combined = pd.DataFrame(engagement_combined_rows)
+add_table(slide, df_engagement_combined,
+          left=Inches(0.2), top=Inches(0.6),
+          width=Inches(9.6), height=Inches(5.5),
+          first_col_width=Inches(1.8))
 
 
 # ===== SLIDE 4: Goal Progression by Domain =====
 slide = prs.slides.add_slide(BLANK)
-add_title(slide, f"Goal Progression by Domain — {report_month_label}", Inches(0.4), Inches(0.2))
-add_table(slide, df_goal_prog,
-          left=Inches(0.3), top=Inches(0.7),
-          width=Inches(9.4), height=Inches(4.0),
-          pct_cols=['COMPLETION_RATE'],
-          first_col_width=Inches(2.5))
+add_title(slide, "Goal Progression by Domain", Inches(0.4), Inches(0.2))
 
-# YTD progression below
-if len(df_goal_prog_ytd) > 0:
-    add_title(slide, f"YTD Goal Progression ({ytd_start[:4]})", Inches(0.4), Inches(5.0))
-    add_table(slide, df_goal_prog_ytd,
-              left=Inches(0.3), top=Inches(5.4),
-              width=Inches(9.4), height=Inches(1.8),
-              pct_cols=['COMPLETION_RATE'],
-              first_col_width=Inches(2.5))
+# Build combined goal progression with MoM + YTD
+prog_combined_rows = []
+all_domains = list(df_goal_prog['GOAL_DOMAIN'].unique()) if len(df_goal_prog) > 0 else []
+for domain in all_domains:
+    curr = df_goal_prog[df_goal_prog['GOAL_DOMAIN'] == domain]
+    ytd = df_goal_prog_ytd[df_goal_prog_ytd['GOAL_DOMAIN'] == domain] if len(df_goal_prog_ytd) > 0 else pd.DataFrame()
+
+    curr_total = int(curr['TOTAL_GOALS'].iloc[0]) if len(curr) > 0 else 0
+    curr_completed = int(curr['COMPLETED'].iloc[0]) if len(curr) > 0 else 0
+    curr_rate = float(curr['COMPLETION_RATE'].iloc[0]) if len(curr) > 0 else 0.0
+    ytd_total = int(ytd['TOTAL_GOALS'].iloc[0]) if len(ytd) > 0 else 0
+    ytd_completed = int(ytd['COMPLETED'].iloc[0]) if len(ytd) > 0 else 0
+    ytd_rate = float(ytd['COMPLETION_RATE'].iloc[0]) if len(ytd) > 0 else 0.0
+
+    prog_combined_rows.append({
+        'Goal Domain': domain,
+        f'{report_month_label} Goals': curr_total,
+        f'{report_month_label} Completed': curr_completed,
+        'Completion Rate': f"{curr_rate}%",
+        'YTD Goals': ytd_total,
+        'YTD Completed': ytd_completed,
+        'YTD Rate': f"{ytd_rate}%",
+    })
+
+df_prog_combined = pd.DataFrame(prog_combined_rows)
+add_table(slide, df_prog_combined,
+          left=Inches(0.2), top=Inches(0.6),
+          width=Inches(9.6), height=Inches(5.5),
+          first_col_width=Inches(2.2))
 
 
 # ===== SLIDE 5: Tobacco Coaching Focus =====
