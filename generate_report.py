@@ -782,6 +782,81 @@ p6.font.color.rgb = COLOR_DARK
 p6.space_before = Pt(4)
 
 
+# ===== SLIDE 6: Data Dictionary =====
+slide = prs.slides.add_slide(BLANK)
+add_title(slide, "Data Dictionary", Inches(0.4), Inches(0.2), size=16)
+
+# Draw accent line under title (like the PDF example)
+from pptx.util import Cm
+line = slide.shapes.add_connector(1, Inches(0.4), Inches(0.55), Inches(9.6), Inches(0.55))
+line.line.color.rgb = COLOR_ACCENT
+line.line.width = Pt(3)
+
+dd_tb = slide.shapes.add_textbox(Inches(0.4), Inches(0.7), Inches(9.2), Inches(6.5))
+dd_tf = dd_tb.text_frame
+dd_tf.word_wrap = True
+
+def dd_section(title):
+    p = dd_tf.add_paragraph()
+    p.text = title
+    p.font.name = FONT_BODY
+    p.font.size = Pt(11)
+    p.font.bold = True
+    p.font.color.rgb = COLOR_PRIMARY
+    p.space_before = Pt(10)
+
+def dd_entry(term, definition):
+    p = dd_tf.add_paragraph()
+    p.space_before = Pt(3)
+    run1 = p.add_run()
+    run1.text = f"{term}"
+    run1.font.name = FONT_BODY
+    run1.font.size = Pt(8)
+    run1.font.bold = True
+    run1.font.color.rgb = COLOR_DARK
+    run2 = p.add_run()
+    run2.text = f" \u2013 {definition}"
+    run2.font.name = FONT_BODY
+    run2.font.size = Pt(8)
+    run2.font.color.rgb = COLOR_DARK
+
+# Remove the default empty paragraph
+dd_tf.paragraphs[0].text = ""
+
+dd_section("Coaching Engagement")
+dd_entry("Members Coached", "Distinct count of members who completed at least one successful outbound coaching call within the reporting window")
+dd_entry("Wellbeing Topic", "The primary discussion focus assigned to each call. Determined by coach form selection, keyword inference from notes, call type, or prior topic (180-day lookback). One topic per call")
+dd_entry("General", "Calls where no topic could be determined by any classification tier. Typically engagement/outreach calls or calls before topic recording was introduced")
+dd_entry("% of Members", "Percentage of total distinct coached members who had at least one call in that topic category")
+
+dd_section("Goals")
+dd_entry("Goal Domain", "Categorization of the coaching goal into one of 11 wellbeing areas: Gaps in Care, Exercise, Nutrition, Weight Management, Tobacco Cessation, Mental/Behavioral Health, Stress Management, Condition Management, Financial, Social, Spiritual")
+dd_entry("Other (Goal Domain)", "Goals whose action name does not match any recognized domain keyword. May include free-text goals or uncommon categorizations")
+dd_entry("Not Started", "A goal that has been created in the system but the member has not yet begun working toward it. These are typically system-recommended goals from evidence-based libraries")
+dd_entry("In Progress", "A goal the member is actively working on with their coach")
+dd_entry("Completed", "A goal that was achieved and closed by the coach or system")
+dd_entry("Withdrawn", "A goal that was abandoned, refused, or no longer applicable")
+dd_entry("Goal Number", "Goals are numbered 1\u20136 per member in the order they were set within a coaching enrollment")
+dd_entry("Completion Rate", "Goals completed divided by total goals (Completed + In Progress + Not Started), expressed as a percentage")
+
+dd_section("Tobacco Coaching Focus")
+dd_entry("Tobacco Participants", "Members who had 'Tobacco' selected as their coaching topic or whose call type was 'Tobacco' at any point in their coaching history, and had at least one call in the reporting period")
+dd_entry("Active Tobacco Participants", "Subset of Tobacco Participants who additionally have a formal Tobacco Cessation goal with status In Progress or Not Started")
+dd_entry("Goal Coverage Gap", "The number and percentage of Tobacco Participants who discussed tobacco but do not have a formal Tobacco Cessation goal being tracked")
+
+dd_section("Timeframes & Comparisons")
+dd_entry("L12M (Last 12 Months)", "Trailing 12 calendar months ending with the report month. Provides a comprehensive view smoothing seasonal variation")
+dd_entry("MoM Change", "Net difference between the current reporting month and the immediately prior month")
+dd_entry("90-Day Rolling Average", "Total members or goals in the most recent 90-day window divided by 3, showing the monthly run rate. Compared against the prior 90-day window for trend")
+
+dd_section("Data Sources")
+dd_entry("Coaching Calls", "BI_REPORTING.MEMBER_CALL_DATA \u2013 successful outbound calls with billable or interaction-eligible call types per CALLTYPE_XREF_VW")
+dd_entry("Discussion Topics", "ENT_WH.COACH_NOTES_WORKFLOW (questions 502533, 502758, 502534, 502833) and COACH_NOTES_WORKFLOW_DM (questions 502599, 502616)")
+dd_entry("Goals", "SCP.AH_MEMBER_ACTION \u2013 ActionType 2 (Coach-Created) and 3 (System-Recommended). Current status snapshot as of data refresh date")
+dd_entry("Enrollment Bridge", "BI_REPORTING.COACHING_ENROLLMENT_MODEL \u2013 links coaching account IDs to member GUIDs/CURRENTGUIDs")
+dd_entry("Refresh Cadence", "Data is refreshed on the 1st of each month. All metrics reflect the state of the data as of the most recent refresh")
+
+
 # --- Save ---
 period_str = f"{start_date.replace('-', '')}_{end_date.replace('-', '')}"
 output_filename = f"coaching_report_{customer_id}_{period_str}.pptx"
