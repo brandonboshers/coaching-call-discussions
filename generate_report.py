@@ -342,9 +342,22 @@ prior_completed = int(df_goal_dist_prior[df_goal_dist_prior['GOAL_STATUS'] == 'C
 current_calls = len(df_engagement) if len(df_engagement) > 0 else 0  # topics count
 
 # Tobacco KPIs
-tob_current = df_tobacco.set_index('METRIC')['VALUE'].to_dict() if len(df_tobacco) > 0 else {}
-tob_prior = df_tobacco_prior.set_index('METRIC')['VALUE'].to_dict() if len(df_tobacco_prior) > 0 else {}
-tob_ytd = df_tobacco_ytd.set_index('METRIC')['VALUE'].to_dict() if len(df_tobacco_ytd) > 0 else {}
+def clean_tob_value(val):
+    """Clean tobacco values — round percentages to 1 decimal."""
+    if val is None:
+        return '0'
+    val = str(val).strip()
+    if '%' in val:
+        try:
+            num = float(val.replace('%', '').replace('%%', ''))
+            return f"{num:.1f}%"
+        except ValueError:
+            return val
+    return val
+
+tob_current = {k: clean_tob_value(v) for k, v in (df_tobacco.set_index('METRIC')['VALUE'].to_dict().items())} if len(df_tobacco) > 0 else {}
+tob_prior = {k: clean_tob_value(v) for k, v in (df_tobacco_prior.set_index('METRIC')['VALUE'].to_dict().items())} if len(df_tobacco_prior) > 0 else {}
+tob_ytd = {k: clean_tob_value(v) for k, v in (df_tobacco_ytd.set_index('METRIC')['VALUE'].to_dict().items())} if len(df_tobacco_ytd) > 0 else {}
 
 
 # --- Build presentation ---
