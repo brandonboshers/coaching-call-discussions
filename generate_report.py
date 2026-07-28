@@ -541,10 +541,10 @@ p.font.size = Pt(10)
 p.font.color.rgb = COLOR_MUTED
 
 # KPI row — L12M primary, current month delta
-x_start = Inches(0.3)
+x_start = Inches(0.2)
 y_pos = Inches(1.0)
-kpi_width = Inches(2.3)
-spacing = Inches(2.4)
+kpi_width = Inches(1.9)
+spacing = Inches(1.95)
 
 # 90-day rolling averages (per month)
 r90_members = int(df_engagement_r90['MEMBERS'].sum()) if len(df_engagement_r90) > 0 else 0
@@ -571,18 +571,25 @@ add_kpi_box(slide, "L12M Goals Completed", f"{t12_completed:,}",
             r90_avg=f"{r90_avg_completed:,}", p90_avg=f"{p90_avg_completed:,}",
             left=x_start + spacing, top=y_pos, width=kpi_width, height=Inches(1.6))
 
-add_kpi_box(slide, f"{report_month_label} Members", f"{current_members:,}",
-            prior_value=f"{prior_members:,}",
-            delta=current_members - prior_members,
-            left=x_start + spacing * 2, top=y_pos, width=kpi_width, height=Inches(1.6))
-
 tob_current_count = tob_current.get('Tobacco Participants', '0')
 tob_t12_count = tob_t12.get('Tobacco Participants', '0')
 add_kpi_box(slide, "L12M Tobacco Participants", tob_t12_count,
             curr_value=tob_current_count,
             prior_value=tob_prior.get('Tobacco Participants', '0'),
-            delta=safe_int(tob_current.get('Tobacco Participants', 0)) - safe_int(tob_prior.get('Tobacco Participants', 0)),
+            delta=safe_int(tob_current_count) - safe_int(tob_prior.get('Tobacco Participants', 0)),
+            left=x_start + spacing * 2, top=y_pos, width=kpi_width, height=Inches(1.6))
+
+add_kpi_box(slide, f"{report_month_label} Members", f"{current_members:,}",
+            curr_value=f"{current_members:,}",
+            prior_value=f"{prior_members:,}",
+            delta=current_members - prior_members,
             left=x_start + spacing * 3, top=y_pos, width=kpi_width, height=Inches(1.6))
+
+add_kpi_box(slide, f"{report_month_label} Tobacco", tob_current_count,
+            curr_value=tob_current_count,
+            prior_value=tob_prior.get('Tobacco Participants', '0'),
+            delta=safe_int(tob_current_count) - safe_int(tob_prior.get('Tobacco Participants', 0)),
+            left=x_start + spacing * 4, top=y_pos, width=kpi_width, height=Inches(1.6))
 
 # 90-day rolling average row
 r90_members = int(df_engagement_r90['MEMBERS'].sum()) if len(df_engagement_r90) > 0 else 0
