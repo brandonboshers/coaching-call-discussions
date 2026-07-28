@@ -647,12 +647,14 @@ add_table(slide, df_engagement_combined,
 slide = prs.slides.add_slide(BLANK)
 add_title(slide, "Goal Progression by Domain", Inches(0.4), Inches(0.2))
 
-# Build combined goal progression with MoM + L12M
+# Build combined goal progression with MoM + L12M + 90d
 prog_combined_rows = []
 all_domains = list(df_goal_prog['GOAL_DOMAIN'].unique()) if len(df_goal_prog) > 0 else []
 for domain in all_domains:
     curr = df_goal_prog[df_goal_prog['GOAL_DOMAIN'] == domain]
     ytd = df_goal_prog_t12[df_goal_prog_t12['GOAL_DOMAIN'] == domain] if len(df_goal_prog_t12) > 0 else pd.DataFrame()
+    r90 = df_goal_prog_r90[df_goal_prog_r90['GOAL_DOMAIN'] == domain] if len(df_goal_prog_r90) > 0 else pd.DataFrame()
+    p90 = df_goal_prog_p90[df_goal_prog_p90['GOAL_DOMAIN'] == domain] if len(df_goal_prog_p90) > 0 else pd.DataFrame()
 
     curr_total = int(curr['TOTAL_GOALS'].iloc[0]) if len(curr) > 0 else 0
     curr_completed = int(curr['COMPLETED'].iloc[0]) if len(curr) > 0 else 0
@@ -660,15 +662,20 @@ for domain in all_domains:
     ytd_total = int(ytd['TOTAL_GOALS'].iloc[0]) if len(ytd) > 0 else 0
     t12_completed = int(ytd['COMPLETED'].iloc[0]) if len(ytd) > 0 else 0
     ytd_rate = float(ytd['COMPLETION_RATE'].iloc[0]) if len(ytd) > 0 else 0.0
+    r90_total = int(r90['TOTAL_GOALS'].iloc[0]) if len(r90) > 0 else 0
+    p90_total = int(p90['TOTAL_GOALS'].iloc[0]) if len(p90) > 0 else 0
+    r90_avg = round(r90_total / 3)
+    p90_avg = round(p90_total / 3)
+    r90_d = r90_avg - p90_avg
 
     prog_combined_rows.append({
         'Goal Domain': domain,
         'L12M Goals': f"{ytd_total:,}",
         'L12M Completed': f"{t12_completed:,}",
         'L12M Rate': f"{ytd_rate:.1f}%",
-        f'{report_month_label} Goals': f"{curr_total:,}",
-        f'{report_month_label} Completed': f"{curr_completed:,}",
-        'Completion Rate': f"{curr_rate:.1f}%",
+        '90D Avg': f"{r90_avg:,}",
+        'Prior 90D Avg': f"{p90_avg:,}",
+        '90D \u0394': f"+{r90_d:,}" if r90_d > 0 else f"{r90_d:,}",
     })
 
 df_prog_combined = pd.DataFrame(prog_combined_rows)
@@ -690,14 +697,21 @@ for metric in tob_metrics:
     prior_val = tob_prior.get(metric.rstrip('\u00b9\u00b2'), '0')
     ytd_val = tob_t12.get(metric.rstrip('\u00b9\u00b2'), '0')
 
-    # Compute MoM change (skip for Completion Rate)
+    # Compute MoM change and 90d (skip for Completion Rate)
     if metric != 'Completion Rate':
         c = safe_int(curr_val)
         p = safe_int(prior_val)
         mom = c - p
         mom_str = f"+{mom}" if mom > 0 else str(mom)
+        r90_str = str(c)
+        p90_str = str(p)
+        d90 = c - p
+        d90_str = f"+{d90}" if d90 > 0 else str(d90)
     else:
         mom_str = '—'
+        r90_str = '—'
+        p90_str = '—'
+        d90_str = '—'
 
     tobacco_combined_rows.append({
         'Metric': metric,
@@ -705,6 +719,9 @@ for metric in tob_metrics:
         f'{report_month_label}': curr_val,
         f'{prior_month_label}': prior_val,
         'MoM Change': mom_str,
+        '90D Avg': r90_str,
+        'Prior 90D Avg': p90_str,
+        '90D Δ': d90_str,
     })
 
 df_tobacco_combined = pd.DataFrame(tobacco_combined_rows)
