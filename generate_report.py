@@ -540,11 +540,11 @@ p.font.name = FONT_BODY
 p.font.size = Pt(10)
 p.font.color.rgb = COLOR_MUTED
 
-# KPI row — 6 boxes: 3 L12M (with 90d avg), 3 Monthly (with MoM)
-x_start = Inches(0.1)
-y_pos = Inches(1.0)
-kpi_width = Inches(1.6)
-spacing = Inches(1.65)
+# KPI row 1 — 3 L12M KPIs (with 90d avg subscript)
+x_start = Inches(0.3)
+y_pos = Inches(0.9)
+kpi_width = Inches(3.0)
+spacing = Inches(3.2)
 
 # 90-day rolling averages (per month)
 r90_members = int(df_engagement_r90['MEMBERS'].sum()) if len(df_engagement_r90) > 0 else 0
@@ -555,67 +555,47 @@ r90_avg_members = round(r90_members / 3)
 p90_avg_members = round(p90_members / 3)
 r90_avg_completed = round(r90_completed / 3)
 p90_avg_completed = round(p90_completed / 3)
-
-# L12M KPIs — 90d rolling avg subscript + delta vs prior 90d
-add_kpi_box(slide, "L12M Members Coached", f"{t12_members:,}",
-            r90_avg=f"{r90_avg_members:,}", p90_avg=f"{p90_avg_members:,}",
-            delta=r90_avg_members - p90_avg_members,
-            delta_label="vs prior 90d",
-            left=x_start, top=y_pos, width=kpi_width, height=Inches(1.4))
-
-t12_completed = int(df_goal_dist_t12[df_goal_dist_t12['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_t12) > 0 else 0
-add_kpi_box(slide, "L12M Goals Completed", f"{t12_completed:,}",
-            r90_avg=f"{r90_avg_completed:,}", p90_avg=f"{p90_avg_completed:,}",
-            delta=r90_avg_completed - p90_avg_completed,
-            delta_label="vs prior 90d",
-            left=x_start + spacing, top=y_pos, width=kpi_width, height=Inches(1.4))
-
 tob_current_count = tob_current.get('Tobacco Participants', '0')
 tob_t12_count = tob_t12.get('Tobacco Participants', '0')
 tob_r90 = safe_int(tob_current_count)
 tob_p90 = safe_int(tob_prior.get('Tobacco Participants', 0))
+
+add_kpi_box(slide, "L12M Members Coached", f"{t12_members:,}",
+            r90_avg=f"{r90_avg_members:,}", p90_avg=f"{p90_avg_members:,}",
+            left=x_start, top=y_pos, width=kpi_width, height=Inches(1.2))
+
+t12_completed = int(df_goal_dist_t12[df_goal_dist_t12['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_t12) > 0 else 0
+add_kpi_box(slide, "L12M Goals Completed", f"{t12_completed:,}",
+            r90_avg=f"{r90_avg_completed:,}", p90_avg=f"{p90_avg_completed:,}",
+            left=x_start + spacing, top=y_pos, width=kpi_width, height=Inches(1.2))
+
 add_kpi_box(slide, "L12M Tobacco Participants", tob_t12_count,
             r90_avg=f"{tob_r90:,}", p90_avg=f"{tob_p90:,}",
-            delta=tob_r90 - tob_p90,
-            delta_label="vs prior 90d",
-            left=x_start + spacing * 2, top=y_pos, width=kpi_width, height=Inches(1.4))
+            left=x_start + spacing * 2, top=y_pos, width=kpi_width, height=Inches(1.2))
 
-# Monthly KPIs — May subscript + delta vs prior month
+# KPI row 2 — 3 Monthly KPIs (with Jun/May + MoM delta)
+y_pos2 = Inches(2.3)
+
 add_kpi_box(slide, f"{report_month_label} Members", f"{current_members:,}",
             curr_value=f"{current_members:,}",
             prior_value=f"{prior_members:,}",
             delta=current_members - prior_members,
-            delta_label="vs prior month",
-            left=x_start + spacing * 3, top=y_pos, width=kpi_width, height=Inches(1.4))
+            left=x_start, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
-add_kpi_box(slide, f"{report_month_label} Goals", f"{current_completed:,}",
+add_kpi_box(slide, f"{report_month_label} Goals Completed", f"{current_completed:,}",
             curr_value=f"{current_completed:,}",
             prior_value=f"{prior_completed:,}",
             delta=current_completed - prior_completed,
-            delta_label="vs prior month",
-            left=x_start + spacing * 4, top=y_pos, width=kpi_width, height=Inches(1.4))
+            left=x_start + spacing, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, f"{report_month_label} Tobacco", tob_current_count,
             curr_value=tob_current_count,
             prior_value=tob_prior.get('Tobacco Participants', '0'),
             delta=safe_int(tob_current_count) - safe_int(tob_prior.get('Tobacco Participants', 0)),
-            delta_label="vs prior month",
-            left=x_start + spacing * 5, top=y_pos, width=kpi_width, height=Inches(1.4))
+            left=x_start + spacing * 2, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
-# 90-day rolling average row
-r90_members = int(df_engagement_r90['MEMBERS'].sum()) if len(df_engagement_r90) > 0 else 0
-p90_members = int(df_engagement_p90['MEMBERS'].sum()) if len(df_engagement_p90) > 0 else 0
-r90_completed = int(df_goal_dist_r90[df_goal_dist_r90['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_r90) > 0 else 0
-p90_completed = int(df_goal_dist_p90[df_goal_dist_p90['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_p90) > 0 else 0
-
-# Monthly averages (divide by 3 months)
-r90_avg_members = round(r90_members / 3)
-p90_avg_members = round(p90_members / 3)
-r90_avg_completed = round(r90_completed / 3)
-p90_avg_completed = round(p90_completed / 3)
-
-# Goal Status Distribution — L12M primary, with monthly columns
-add_title(slide, "Goal Status Distribution", Inches(0.4), Inches(2.9))
+# Goal Status Distribution
+add_title(slide, "Goal Status Distribution", Inches(0.4), Inches(3.7))
 
 # Build combined DataFrame — L12M first
 statuses = ['Completed', 'In Progress', 'Not Started', 'Withdrawn']
@@ -624,14 +604,12 @@ for status in statuses:
     curr_row = df_goal_dist[df_goal_dist['GOAL_STATUS'] == status]
     prior_row = df_goal_dist_prior[df_goal_dist_prior['GOAL_STATUS'] == status]
     ytd_row = df_goal_dist_t12[df_goal_dist_t12['GOAL_STATUS'] == status]
-
     curr_count = int(curr_row['COUNT'].iloc[0]) if len(curr_row) > 0 else 0
     curr_pct = float(curr_row['GOAL_PCT'].iloc[0]) if len(curr_row) > 0 else 0.0
     prior_count = int(prior_row['COUNT'].iloc[0]) if len(prior_row) > 0 else 0
     ytd_count = int(ytd_row['COUNT'].iloc[0]) if len(ytd_row) > 0 else 0
     ytd_pct = float(ytd_row['GOAL_PCT'].iloc[0]) if len(ytd_row) > 0 else 0.0
     mom_change = curr_count - prior_count
-
     combined_rows.append({
         'Goal Status': status,
         'L12M': f"{ytd_count:,}",
@@ -643,63 +621,9 @@ for status in statuses:
 
 df_goal_dist_combined = pd.DataFrame(combined_rows)
 add_table(slide, df_goal_dist_combined,
-          left=Inches(0.4), top=Inches(3.3),
+          left=Inches(0.4), top=Inches(4.1),
           width=Inches(9.2), height=Inches(2.0),
           first_col_width=Inches(1.6))
-
-# Dynamic insights
-insights = []
-
-# MoM member trend
-mem_delta = current_members - prior_members
-if mem_delta > 0:
-    insights.append(f"Member engagement increased by {mem_delta:,} members ({abs(mem_delta)*100//max(prior_members,1)}%) from {prior_month_label} to {report_month_label}.")
-elif mem_delta < 0:
-    insights.append(f"Member engagement decreased by {abs(mem_delta):,} members ({abs(mem_delta)*100//max(prior_members,1)}%) from {prior_month_label} to {report_month_label}.")
-else:
-    insights.append(f"Member engagement remained stable between {prior_month_label} and {report_month_label}.")
-
-# Goal completion trend
-comp_delta = current_completed - prior_completed
-if comp_delta > 0:
-    insights.append(f"Goal completions rose by {comp_delta:,} month-over-month, indicating positive momentum in member progress.")
-elif comp_delta < 0:
-    insights.append(f"Goal completions declined by {abs(comp_delta):,} month-over-month. This may reflect seasonal patterns or coaching focus shifts.")
-
-# Not Started dominance
-total_goals_curr = sum(int(df_goal_dist[df_goal_dist['GOAL_STATUS'] == s]['COUNT'].iloc[0]) if len(df_goal_dist[df_goal_dist['GOAL_STATUS'] == s]) > 0 else 0 for s in statuses)
-ns_count = int(df_goal_dist[df_goal_dist['GOAL_STATUS'] == 'Not Started']['COUNT'].iloc[0]) if len(df_goal_dist[df_goal_dist['GOAL_STATUS'] == 'Not Started']) > 0 else 0
-if total_goals_curr > 0:
-    ns_pct = ns_count * 100 // total_goals_curr
-    if ns_pct > 90:
-        insights.append(f"{ns_pct}% of goals are in 'Not Started' status. These are system-recommended goals awaiting member activation — a common pattern for evidence-based goal libraries.")
-
-# Top topic
-if len(df_engagement) > 0:
-    top_topic = df_engagement.iloc[0]['WELLBEING_TOPIC']
-    top_members = int(df_engagement.iloc[0]['MEMBERS'])
-    insights.append(f"'{top_topic}' was the most discussed topic this month with {top_members:,} members, reflecting the primary coaching focus area.")
-
-# Tobacco gap
-tob_part = safe_int(tob_current.get('Tobacco Participants', 0))
-tob_active = safe_int(tob_current.get('Active Tobacco Participants', 0))
-if tob_part > 0 and tob_active < tob_part:
-    gap = tob_part - tob_active
-    insights.append(f"{gap} of {tob_part} tobacco-discussing members ({gap*100//tob_part}%) do not have a formal Tobacco Cessation goal — an opportunity to formalize cessation tracking.")
-
-# Dynamic insights — moved to after the table
-add_title(slide, "Key Insights", Inches(0.4), Inches(5.5), size=10)
-tb_ins = slide.shapes.add_textbox(Inches(0.4), Inches(5.8), Inches(9.2), Inches(1.5))
-tf_ins = tb_ins.text_frame
-tf_ins.word_wrap = True
-for i, insight in enumerate(insights[:3]):  # Top 3 insights only to fit
-    p_ins = tf_ins.paragraphs[0] if i == 0 else tf_ins.add_paragraph()
-    p_ins.text = f"\u2022  {insight}"
-    p_ins.font.name = FONT_BODY
-    p_ins.font.size = Pt(7)
-    p_ins.font.color.rgb = COLOR_DARK
-    p_ins.space_before = Pt(1)
-
 
 # ===== SLIDE 3: Coaching Engagement by Wellbeing Topic =====
 slide = prs.slides.add_slide(BLANK)
