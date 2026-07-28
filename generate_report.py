@@ -556,41 +556,50 @@ p90_avg_members = round(p90_members / 3)
 r90_avg_completed = round(r90_completed / 3)
 p90_avg_completed = round(p90_completed / 3)
 
-# L12M KPIs — 90d rolling avg subscript, no MoM
+# L12M KPIs — 90d rolling avg subscript + delta vs prior 90d
 add_kpi_box(slide, "L12M Members Coached", f"{t12_members:,}",
             r90_avg=f"{r90_avg_members:,}", p90_avg=f"{p90_avg_members:,}",
+            delta=r90_avg_members - p90_avg_members,
+            delta_label="vs prior 90d",
             left=x_start, top=y_pos, width=kpi_width, height=Inches(1.4))
 
 t12_completed = int(df_goal_dist_t12[df_goal_dist_t12['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_t12) > 0 else 0
 add_kpi_box(slide, "L12M Goals Completed", f"{t12_completed:,}",
             r90_avg=f"{r90_avg_completed:,}", p90_avg=f"{p90_avg_completed:,}",
+            delta=r90_avg_completed - p90_avg_completed,
+            delta_label="vs prior 90d",
             left=x_start + spacing, top=y_pos, width=kpi_width, height=Inches(1.4))
 
 tob_current_count = tob_current.get('Tobacco Participants', '0')
 tob_t12_count = tob_t12.get('Tobacco Participants', '0')
-tob_r90 = safe_int(tob_current_count)  # approximate: current month as proxy
+tob_r90 = safe_int(tob_current_count)
 tob_p90 = safe_int(tob_prior.get('Tobacco Participants', 0))
 add_kpi_box(slide, "L12M Tobacco Participants", tob_t12_count,
-            r90_avg=f"{round(tob_r90):,}", p90_avg=f"{round(tob_p90):,}",
+            r90_avg=f"{tob_r90:,}", p90_avg=f"{tob_p90:,}",
+            delta=tob_r90 - tob_p90,
+            delta_label="vs prior 90d",
             left=x_start + spacing * 2, top=y_pos, width=kpi_width, height=Inches(1.4))
 
-# Monthly KPIs — Jun/May subscript with MoM delta
+# Monthly KPIs — May subscript + delta vs prior month
 add_kpi_box(slide, f"{report_month_label} Members", f"{current_members:,}",
             curr_value=f"{current_members:,}",
             prior_value=f"{prior_members:,}",
             delta=current_members - prior_members,
+            delta_label="vs prior month",
             left=x_start + spacing * 3, top=y_pos, width=kpi_width, height=Inches(1.4))
 
 add_kpi_box(slide, f"{report_month_label} Goals", f"{current_completed:,}",
             curr_value=f"{current_completed:,}",
             prior_value=f"{prior_completed:,}",
             delta=current_completed - prior_completed,
+            delta_label="vs prior month",
             left=x_start + spacing * 4, top=y_pos, width=kpi_width, height=Inches(1.4))
 
 add_kpi_box(slide, f"{report_month_label} Tobacco", tob_current_count,
             curr_value=tob_current_count,
             prior_value=tob_prior.get('Tobacco Participants', '0'),
             delta=safe_int(tob_current_count) - safe_int(tob_prior.get('Tobacco Participants', 0)),
+            delta_label="vs prior month",
             left=x_start + spacing * 5, top=y_pos, width=kpi_width, height=Inches(1.4))
 
 # 90-day rolling average row
