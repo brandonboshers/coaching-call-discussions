@@ -440,11 +440,11 @@ for status in statuses:
     combined_rows.append({
         'Goal Status': status,
         f'{report_month_label}': curr_count,
-        '%': f"{curr_pct}%",
+        '%': f"{curr_pct:.1f}%",
         f'{prior_month_label}': prior_count,
         'MoM Change': f"+{mom_change}" if mom_change > 0 else str(mom_change),
         'YTD': ytd_count,
-        'YTD %': f"{ytd_pct}%"
+        'YTD %': f"{ytd_pct:.1f}%"
     })
 
 df_goal_dist_combined = pd.DataFrame(combined_rows)
@@ -477,7 +477,7 @@ for topic in all_topics:
     engagement_combined_rows.append({
         'Wellbeing Topic': topic,
         f'{report_month_label}': curr_members,
-        '% of Members': f"{curr_pct}%",
+        '% of Members': f"{curr_pct:.1f}%",
         f'{prior_month_label}': prior_members_val,
         'MoM Change': f"+{mom_delta}" if mom_delta > 0 else str(mom_delta),
         'YTD Members': ytd_members_val,
@@ -514,10 +514,10 @@ for domain in all_domains:
         'Goal Domain': domain,
         f'{report_month_label} Goals': curr_total,
         f'{report_month_label} Completed': curr_completed,
-        'Completion Rate': f"{curr_rate}%",
+        'Completion Rate': f"{curr_rate:.1f}%",
         'YTD Goals': ytd_total,
         'YTD Completed': ytd_completed,
-        'YTD Rate': f"{ytd_rate}%",
+        'YTD Rate': f"{ytd_rate:.1f}%",
     })
 
 df_prog_combined = pd.DataFrame(prog_combined_rows)
@@ -531,25 +531,35 @@ add_table(slide, df_prog_combined,
 slide = prs.slides.add_slide(BLANK)
 add_title(slide, "Tobacco Coaching Focus", Inches(0.4), Inches(0.2))
 
-# Current month table
-add_title(slide, report_month_label, Inches(0.4), Inches(0.6), size=11)
-add_table(slide, df_tobacco,
-          left=Inches(0.4), top=Inches(1.0),
-          width=Inches(4.2), height=Inches(2.3),
-          first_col_width=Inches(2.8))
+# Build combined tobacco table with month names
+tob_metrics = ['Tobacco Participants', 'Active Tobacco Participants', 'Goals Completed', 'Goals In Progress', 'Completion Rate']
+tobacco_combined_rows = []
+for metric in tob_metrics:
+    curr_val = tob_current.get(metric, '0')
+    prior_val = tob_prior.get(metric, '0')
+    ytd_val = tob_ytd.get(metric, '0')
 
-# YTD table
-add_title(slide, f"Year-to-Date ({ytd_start[:4]})", Inches(5.2), Inches(0.6), size=11)
-add_table(slide, df_tobacco_ytd,
-          left=Inches(5.2), top=Inches(1.0),
-          width=Inches(4.2), height=Inches(2.3),
-          first_col_width=Inches(2.8))
+    # Compute MoM change (skip for Completion Rate)
+    if metric != 'Completion Rate':
+        c = safe_int(curr_val)
+        p = safe_int(prior_val)
+        mom = c - p
+        mom_str = f"+{mom}" if mom > 0 else str(mom)
+    else:
+        mom_str = '—'
 
-# Prior month comparison
-add_title(slide, f"Prior Month ({prior_month_label})", Inches(0.4), Inches(3.6), size=11)
-add_table(slide, df_tobacco_prior,
-          left=Inches(0.4), top=Inches(4.0),
-          width=Inches(4.2), height=Inches(2.3),
+    tobacco_combined_rows.append({
+        'Metric': metric,
+        f'{report_month_label}': curr_val,
+        f'{prior_month_label}': prior_val,
+        'MoM Change': mom_str,
+        'YTD': ytd_val,
+    })
+
+df_tobacco_combined = pd.DataFrame(tobacco_combined_rows)
+add_table(slide, df_tobacco_combined,
+          left=Inches(0.3), top=Inches(0.6),
+          width=Inches(9.4), height=Inches(2.5),
           first_col_width=Inches(2.8))
 
 
