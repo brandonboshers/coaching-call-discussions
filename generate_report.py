@@ -204,6 +204,38 @@ def query_tobacco(conn, start, end):
 
 
 with get_connection() as conn:
+    # Total enrolled members (L12M)
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT CURRENTGUID)
+        FROM ENT_WH.COACHING_ENROLLMENT_MODEL
+        WHERE UPPER(LEVEL_NAME) = 'ENROLLED'
+          AND BIEFFECTIVEDATE <= '{t12_end}'
+          AND BIENDDATE >= '{t12_start}'
+          AND UPPER(CUSTOMERID) = UPPER('{customer_id}')
+    """)
+    total_enrolled_t12 = cursor.fetchone()[0]
+
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT CURRENTGUID)
+        FROM ENT_WH.COACHING_ENROLLMENT_MODEL
+        WHERE UPPER(LEVEL_NAME) = 'ENROLLED'
+          AND BIEFFECTIVEDATE <= '{end_date}'
+          AND BIENDDATE >= '{start_date}'
+          AND UPPER(CUSTOMERID) = UPPER('{customer_id}')
+    """)
+    total_enrolled_month = cursor.fetchone()[0]
+
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT CURRENTGUID)
+        FROM ENT_WH.COACHING_ENROLLMENT_MODEL
+        WHERE UPPER(LEVEL_NAME) = 'ENROLLED'
+          AND BIEFFECTIVEDATE <= '{prior_month_end}'
+          AND BIENDDATE >= '{prior_month_start}'
+          AND UPPER(CUSTOMERID) = UPPER('{customer_id}')
+    """)
+    total_enrolled_prior = cursor.fetchone()[0]
+
     # Current month
     df_engagement = query_engagement(conn, start_date, end_date)
     df_goal_dist = query_goal_dist(conn, start_date, end_date)
@@ -511,11 +543,11 @@ p.font.name = FONT_BODY
 p.font.size = Pt(10)
 p.font.color.rgb = COLOR_MUTED
 
-# KPI row 1 — 3 L12M KPIs (with 90d avg subscript)
-x_start = Inches(0.3)
+# KPI row 1 — 4 L12M KPIs (with 90d avg subscript)
+x_start = Inches(0.2)
 y_pos = Inches(0.9)
-kpi_width = Inches(3.0)
-spacing = Inches(3.2)
+kpi_width = Inches(2.3)
+spacing = Inches(2.45)
 
 # 90-day rolling averages (per month)
 r90_members = int(df_engagement_r90['MEMBERS'].sum()) if len(df_engagement_r90) > 0 else 0
@@ -531,24 +563,30 @@ tob_t12_count = tob_t12.get('Tobacco Participants', '0')
 tob_r90 = safe_int(tob_current_count)
 tob_p90 = safe_int(tob_prior.get('Tobacco Participants', 0))
 
+add_kpi_box(slide, "L12M Total Enrolled", f"{total_enrolled_t12:,}",
+            r90_avg=f"{report_month_label}: {total_enrolled_month:,}", p90_avg=f"{prior_month_label}: {total_enrolled_prior:,}",
+            delta=total_enrolled_month - total_enrolled_prior,
+            delta_label="vs prior month",
+            left=x_start, top=y_pos, width=kpi_width, height=Inches(1.2))
+
 add_kpi_box(slide, "L12M Members Coached", f"{t12_members:,}",
             r90_avg=f"90d Avg: {r90_avg_members:,}", p90_avg=f"Prior 90d: {p90_avg_members:,}",
             delta=r90_avg_members - p90_avg_members,
             delta_label="vs prior 90d",
-            left=x_start, top=y_pos, width=kpi_width, height=Inches(1.2))
+            left=x_start + spacing, top=y_pos, width=kpi_width, height=Inches(1.2))
 
 t12_completed = int(df_goal_dist_t12[df_goal_dist_t12['GOAL_STATUS'] == 'Completed']['COUNT'].sum()) if len(df_goal_dist_t12) > 0 else 0
 add_kpi_box(slide, "L12M Goals Completed", f"{t12_completed:,}",
             r90_avg=f"90d Avg: {r90_avg_completed:,}", p90_avg=f"Prior 90d: {p90_avg_completed:,}",
             delta=r90_avg_completed - p90_avg_completed,
             delta_label="vs prior 90d",
-            left=x_start + spacing, top=y_pos, width=kpi_width, height=Inches(1.2))
+            left=x_start + spacing * 2, top=y_pos, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, "L12M Tobacco Participants", tob_t12_count,
             r90_avg=f"90d Avg: {tob_r90:,}", p90_avg=f"Prior 90d: {tob_p90:,}",
             delta=tob_r90 - tob_p90,
             delta_label="vs prior 90d",
-            left=x_start + spacing * 2, top=y_pos, width=kpi_width, height=Inches(1.2))
+            left=x_start + spacing * 3, top=y_pos, width=kpi_width, height=Inches(1.2))
 
 # KPI row 2 — 3 Monthly KPIs (same structure: value, label, prior month line, delta)
 y_pos2 = Inches(2.3)
