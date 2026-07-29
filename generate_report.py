@@ -211,7 +211,7 @@ with get_connection() as conn:
     cursor.execute(f"""
         SELECT COUNT(DISTINCT CE.CURRENTGUID)
         FROM ENT_WH.COACHING_ENROLLMENT_MODEL CE
-        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED'
+        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED' AND UPPER(CE.OFFERING_STATUS) = 'ENROLLED'
           AND CE.BIEFFECTIVEDATE <= '{t12_end}'
           AND CE.BIENDDATE >= '{t12_start}'
           AND UPPER(CE.CUSTOMERID) = UPPER('{customer_id}')
@@ -222,7 +222,7 @@ with get_connection() as conn:
     cursor.execute(f"""
         SELECT COUNT(DISTINCT CE.CURRENTGUID)
         FROM ENT_WH.COACHING_ENROLLMENT_MODEL CE
-        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED'
+        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED' AND UPPER(CE.OFFERING_STATUS) = 'ENROLLED'
           AND CE.BIEFFECTIVEDATE <= '{end_date}'
           AND CE.BIENDDATE >= '{start_date}'
           AND UPPER(CE.CUSTOMERID) = UPPER('{customer_id}')
@@ -233,7 +233,7 @@ with get_connection() as conn:
     cursor.execute(f"""
         SELECT COUNT(DISTINCT CE.CURRENTGUID)
         FROM ENT_WH.COACHING_ENROLLMENT_MODEL CE
-        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED'
+        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED' AND UPPER(CE.OFFERING_STATUS) = 'ENROLLED'
           AND CE.BIEFFECTIVEDATE <= '{prior_month_end}'
           AND CE.BIENDDATE >= '{prior_month_start}'
           AND UPPER(CE.CUSTOMERID) = UPPER('{customer_id}')
@@ -245,7 +245,7 @@ with get_connection() as conn:
     cursor.execute(f"""
         SELECT COUNT(DISTINCT CE.CURRENTGUID)
         FROM ENT_WH.COACHING_ENROLLMENT_MODEL CE
-        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED'
+        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED' AND UPPER(CE.OFFERING_STATUS) = 'ENROLLED'
           AND CE.BIEFFECTIVEDATE <= '{r90_end_str}'
           AND CE.BIENDDATE >= '{r90_start}'
           AND UPPER(CE.CUSTOMERID) = UPPER('{customer_id}')
@@ -256,7 +256,7 @@ with get_connection() as conn:
     cursor.execute(f"""
         SELECT COUNT(DISTINCT CE.CURRENTGUID)
         FROM ENT_WH.COACHING_ENROLLMENT_MODEL CE
-        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED'
+        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED' AND UPPER(CE.OFFERING_STATUS) = 'ENROLLED'
           AND CE.BIEFFECTIVEDATE <= '{p90_end}'
           AND CE.BIENDDATE >= '{p90_start}'
           AND UPPER(CE.CUSTOMERID) = UPPER('{customer_id}')
