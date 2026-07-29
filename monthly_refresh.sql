@@ -14,9 +14,51 @@
 
 
 -- =========================================================================
--- STEP 1A: CALLS - one per account per day, billable types only
+-- STEP 1A: ENROLLED POPULATION (condition-pass logic)
+-- DM programs require CONDITION_STATUS = 1. LM/TB always pass.
+-- Uses BI_REPORTING.COACHING_ENROLLMENT_MODEL for condition fields.
+-- =========================================================================
+DROP TABLE IF EXISTS ENROLLED_ACTIVE;
+CREATE LOCAL TEMP TABLE ENROLLED_ACTIVE ON COMMIT PRESERVE ROWS AS
+SELECT DISTINCT
+    A.ACCOUNT,
+    A.CURRENTGUID,
+    A.GUID,
+    A.CUSTOMERID,
+    A.OFFERING_NAME,
+    A.BIEFFECTIVEDATE,
+    A.BIENDDATE
+FROM (
+    SELECT
+        CE.ACCOUNT,
+        CE.CURRENTGUID,
+        CE.GUID,
+        CE.CUSTOMERID,
+        CE.OFFERING_NAME,
+        CE.CONDITION_STATUS,
+        CE.BIEFFECTIVEDATE,
+        CE.BIENDDATE,
+        CASE WHEN (UPPER(CE.OFFERING_NAME) LIKE 'DM%' AND CE.CONDITION_STATUS = 1)
+                  OR UPPER(CE.OFFERING_NAME) LIKE 'LM%'
+                  OR UPPER(CE.OFFERING_NAME) LIKE 'TB%'
+                  OR UPPER(CE.OFFERING_NAME) LIKE 'WM%'
+             THEN 1 ELSE 0
+        END AS CONDITION_PASS
+    FROM BI_REPORTING.COACHING_ENROLLMENT_MODEL CE
+    WHERE UPPER(CE.OFFERING_STATUS) = 'ENROLLED'
+      AND UPPER(CE.LEVEL_NAME) = 'ENROLLED'
+) A
+LEFT JOIN ENT_WH.ELIGMEMBER E_FEP
+    ON A.CURRENTGUID = E_FEP.CURRENTGUID
+    AND UPPER(E_FEP.ORGUNITID) ILIKE '%FEP%'
+WHERE A.CONDITION_PASS = 1
+  AND E_FEP.CURRENTGUID IS NULL;
+
+
+-- =========================================================================
+-- STEP 1B: CALLS - one per account per day, enrolled + billable only
 -- Excludes Engagement calls (outreach, not coaching discussions)
--- Restricts to calls during active enrollment (LEVEL_NAME = 'Enrolled')
+-- Restricts to calls during active enrollment via ENROLLED_ACTIVE
 -- =========================================================================
 DROP TABLE IF EXISTS CALLS_ONE_PER_DAY;
 CREATE LOCAL TEMP TABLE CALLS_ONE_PER_DAY ON COMMIT PRESERVE ROWS AS
@@ -38,22 +80,17 @@ FROM (
         FROM ENT_WH.CALLTYPE_XREF_VW
         WHERE PPPY_BILL_ELIG = 'Y' OR INTERACTION_ELIG = 'Y'
     ) CT ON UPPER(TRIM(MC.DESCRIPTION)) = UPPER(CT.CALL_DESC)
-    JOIN ENT_WH.COACHING_ENROLLMENT_MODEL CE
+    JOIN ENROLLED_ACTIVE CE
         ON MC.ACCOUNT = CE.ACCOUNT
         AND TRUNC(MC.ENCOUNTERDATETIME)::DATE BETWEEN CE.BIEFFECTIVEDATE AND CE.BIENDDATE
-        AND UPPER(CE.LEVEL_NAME) = 'ENROLLED' AND UPPER(CE.OFFERING_STATUS) = 'ENROLLED'
-    LEFT JOIN ENT_WH.ELIGMEMBER E_FEP
-        ON CE.CURRENTGUID = E_FEP.CURRENTGUID
-        AND UPPER(E_FEP.ORGUNITID) ILIKE '%FEP%'
     WHERE UPPER(MC.CALL_STATUS) = 'SUCCESSFUL'
       AND UPPER(MC.DIRECTION) = 'OUTBOUND'
       AND UPPER(TRIM(MC.DESCRIPTION)) != 'ENGAGEMENT'
-      AND E_FEP.CURRENTGUID IS NULL
 ) X WHERE RN = 1;
 
 
 -- =========================================================================
--- STEP 1A2: GUID STAGING - resolve GUID to CURRENTGUID
+-- STEP 1C: GUID STAGING - resolve GUID to CURRENTGUID
 -- =========================================================================
 DROP TABLE IF EXISTS GUID_STAGE;
 CREATE LOCAL TEMP TABLE GUID_STAGE ON COMMIT PRESERVE ROWS AS
@@ -63,7 +100,7 @@ JOIN ENT_WH.ELIGMEMBER E ON C.GUID = E.GUID;
 
 
 -- =========================================================================
--- STEP 1B: LM TOPICS - one per account per day (frequency tiebreak)
+-- STEP 1D: LM TOPICS - one per account per day (frequency tiebreak)
 -- =========================================================================
 DROP TABLE IF EXISTS LM_TOPICS_DEDUPED;
 CREATE LOCAL TEMP TABLE LM_TOPICS_DEDUPED ON COMMIT PRESERVE ROWS AS
@@ -86,7 +123,7 @@ FROM (
 
 
 -- =========================================================================
--- STEP 1C: DM TOPICS - one per account per day
+-- STEP 1E: DM TOPICS - one per account per day
 -- =========================================================================
 DROP TABLE IF EXISTS DM_TOPICS_DEDUPED;
 CREATE LOCAL TEMP TABLE DM_TOPICS_DEDUPED ON COMMIT PRESERVE ROWS AS
@@ -109,7 +146,7 @@ FROM (
 
 
 -- =========================================================================
--- STEP 1D: Identify calls NOT resolved by Tier 1
+-- STEP 1F: Identify calls NOT resolved by Tier 1
 -- =========================================================================
 DROP TABLE IF EXISTS CALLS_NO_TIER1;
 CREATE LOCAL TEMP TABLE CALLS_NO_TIER1 ON COMMIT PRESERVE ROWS AS
@@ -121,7 +158,7 @@ WHERE LM.ACCOUNT IS NULL AND DM.ACCOUNT IS NULL;
 
 
 -- =========================================================================
--- STEP 1E: TIER 1.5 - Text inference (only for calls without Tier 1)
+-- STEP 1G: TIER 1.5 - Text inference (only for calls without Tier 1)
 -- =========================================================================
 DROP TABLE IF EXISTS GOAL_TEXT_TOPICS;
 CREATE LOCAL TEMP TABLE GOAL_TEXT_TOPICS ON COMMIT PRESERVE ROWS AS
@@ -187,7 +224,7 @@ FROM (
 
 
 -- =========================================================================
--- STEP 1F: TIER 3 - Most recent prior topic (180-day lookback)
+-- STEP 1H: TIER 3 - Most recent prior topic (180-day lookback)
 -- =========================================================================
 DROP TABLE IF EXISTS PRIOR_TOPICS;
 CREATE LOCAL TEMP TABLE PRIOR_TOPICS ON COMMIT PRESERVE ROWS AS
@@ -210,7 +247,7 @@ FROM (
 
 
 -- =========================================================================
--- STEP 1G: FINAL COACHING_TOPICS - assemble all tiers
+-- STEP 1I: FINAL COACHING_TOPICS - assemble all tiers
 -- =========================================================================
 DROP TABLE IF EXISTS COACHING_TOPICS;
 CREATE LOCAL TEMP TABLE COACHING_TOPICS ON COMMIT PRESERVE ROWS AS
