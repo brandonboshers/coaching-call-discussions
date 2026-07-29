@@ -204,37 +204,68 @@ def query_tobacco(conn, start, end):
 
 
 with get_connection() as conn:
-    # Total enrolled members (L12M)
+    # Total enrolled members (L12M) — exclude FEP for CareFirst
     cursor = conn.cursor()
+    fep_filter = ""  # FEP exclusion handled in monthly_refresh.sql for CareFirst
+
     cursor.execute(f"""
-        SELECT COUNT(DISTINCT CURRENTGUID)
-        FROM ENT_WH.COACHING_ENROLLMENT_MODEL
-        WHERE UPPER(LEVEL_NAME) = 'ENROLLED'
-          AND BIEFFECTIVEDATE <= '{t12_end}'
-          AND BIENDDATE >= '{t12_start}'
-          AND UPPER(CUSTOMERID) = UPPER('{customer_id}')
+        SELECT COUNT(DISTINCT CE.CURRENTGUID)
+        FROM ENT_WH.COACHING_ENROLLMENT_MODEL CE
+        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED'
+          AND CE.BIEFFECTIVEDATE <= '{t12_end}'
+          AND CE.BIENDDATE >= '{t12_start}'
+          AND UPPER(CE.CUSTOMERID) = UPPER('{customer_id}')
+          {fep_filter}
     """)
     total_enrolled_t12 = cursor.fetchone()[0]
 
     cursor.execute(f"""
-        SELECT COUNT(DISTINCT CURRENTGUID)
-        FROM ENT_WH.COACHING_ENROLLMENT_MODEL
-        WHERE UPPER(LEVEL_NAME) = 'ENROLLED'
-          AND BIEFFECTIVEDATE <= '{end_date}'
-          AND BIENDDATE >= '{start_date}'
-          AND UPPER(CUSTOMERID) = UPPER('{customer_id}')
+        SELECT COUNT(DISTINCT CE.CURRENTGUID)
+        FROM ENT_WH.COACHING_ENROLLMENT_MODEL CE
+        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED'
+          AND CE.BIEFFECTIVEDATE <= '{end_date}'
+          AND CE.BIENDDATE >= '{start_date}'
+          AND UPPER(CE.CUSTOMERID) = UPPER('{customer_id}')
+          {fep_filter}
     """)
     total_enrolled_month = cursor.fetchone()[0]
 
     cursor.execute(f"""
-        SELECT COUNT(DISTINCT CURRENTGUID)
-        FROM ENT_WH.COACHING_ENROLLMENT_MODEL
-        WHERE UPPER(LEVEL_NAME) = 'ENROLLED'
-          AND BIEFFECTIVEDATE <= '{prior_month_end}'
-          AND BIENDDATE >= '{prior_month_start}'
-          AND UPPER(CUSTOMERID) = UPPER('{customer_id}')
+        SELECT COUNT(DISTINCT CE.CURRENTGUID)
+        FROM ENT_WH.COACHING_ENROLLMENT_MODEL CE
+        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED'
+          AND CE.BIEFFECTIVEDATE <= '{prior_month_end}'
+          AND CE.BIENDDATE >= '{prior_month_start}'
+          AND UPPER(CE.CUSTOMERID) = UPPER('{customer_id}')
+          {fep_filter}
     """)
     total_enrolled_prior = cursor.fetchone()[0]
+
+    # 90-day enrollment counts
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT CE.CURRENTGUID)
+        FROM ENT_WH.COACHING_ENROLLMENT_MODEL CE
+        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED'
+          AND CE.BIEFFECTIVEDATE <= '{r90_end_str}'
+          AND CE.BIENDDATE >= '{r90_start}'
+          AND UPPER(CE.CUSTOMERID) = UPPER('{customer_id}')
+          {fep_filter}
+    """)
+    enrolled_r90 = cursor.fetchone()[0]
+
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT CE.CURRENTGUID)
+        FROM ENT_WH.COACHING_ENROLLMENT_MODEL CE
+        WHERE UPPER(CE.LEVEL_NAME) = 'ENROLLED'
+          AND CE.BIEFFECTIVEDATE <= '{p90_end}'
+          AND CE.BIENDDATE >= '{p90_start}'
+          AND UPPER(CE.CUSTOMERID) = UPPER('{customer_id}')
+          {fep_filter}
+    """)
+    enrolled_p90 = cursor.fetchone()[0]
+
+    enrolled_r90_avg = round(enrolled_r90 / 3)
+    enrolled_p90_avg = round(enrolled_p90 / 3)
 
     # Current month
     df_engagement = query_engagement(conn, start_date, end_date)
@@ -564,9 +595,9 @@ tob_r90 = safe_int(tob_current_count)
 tob_p90 = safe_int(tob_prior.get('Tobacco Participants', 0))
 
 add_kpi_box(slide, "L12M Total Enrolled", f"{total_enrolled_t12:,}",
-            r90_avg=f"{report_month_label}: {total_enrolled_month:,}", p90_avg=f"{prior_month_label}: {total_enrolled_prior:,}",
-            delta=total_enrolled_month - total_enrolled_prior,
-            delta_label="vs prior month",
+            r90_avg=f"90d Avg: {enrolled_r90_avg:,}", p90_avg=f"Prior 90d: {enrolled_p90_avg:,}",
+            delta=enrolled_r90_avg - enrolled_p90_avg,
+            delta_label="vs prior 90d",
             left=x_start, top=y_pos, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, "L12M Members Coached", f"{t12_members:,}",
@@ -588,26 +619,32 @@ add_kpi_box(slide, "L12M Tobacco Participants", tob_t12_count,
             delta_label="vs prior 90d",
             left=x_start + spacing * 3, top=y_pos, width=kpi_width, height=Inches(1.2))
 
-# KPI row 2 — 3 Monthly KPIs (same structure: value, label, prior month line, delta)
+# KPI row 2 — 4 Monthly KPIs (same structure: value, label, prior month line, delta)
 y_pos2 = Inches(2.3)
+
+add_kpi_box(slide, f"{report_month_label} Enrolled", f"{total_enrolled_month:,}",
+            r90_avg=f"{total_enrolled_month:,}", p90_avg=f"{prior_month_label}: {total_enrolled_prior:,}",
+            delta=total_enrolled_month - total_enrolled_prior,
+            delta_label="vs prior month",
+            left=x_start, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, f"{report_month_label} Members", f"{current_members:,}",
             r90_avg=f"{current_members:,}", p90_avg=f"{prior_month_label}: {prior_members:,}",
             delta=current_members - prior_members,
             delta_label="vs prior month",
-            left=x_start, top=y_pos2, width=kpi_width, height=Inches(1.2))
+            left=x_start + spacing, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, f"{report_month_label} Goals Completed", f"{current_completed:,}",
             r90_avg=f"{current_completed:,}", p90_avg=f"{prior_month_label}: {prior_completed:,}",
             delta=current_completed - prior_completed,
             delta_label="vs prior month",
-            left=x_start + spacing, top=y_pos2, width=kpi_width, height=Inches(1.2))
+            left=x_start + spacing * 2, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, f"{report_month_label} Tobacco", tob_current_count,
             r90_avg=f"{tob_current_count}", p90_avg=f"{prior_month_label}: {tob_prior.get('Tobacco Participants', '0')}",
             delta=safe_int(tob_current_count) - safe_int(tob_prior.get('Tobacco Participants', 0)),
             delta_label="vs prior month",
-            left=x_start + spacing * 2, top=y_pos2, width=kpi_width, height=Inches(1.2))
+            left=x_start + spacing * 3, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
 # Goal Status Distribution
 add_title(slide, "Goal Status Distribution", Inches(0.4), Inches(3.7))
