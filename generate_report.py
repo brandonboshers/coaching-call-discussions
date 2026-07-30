@@ -621,11 +621,6 @@ add_kpi_box(slide, "L12M Tobacco Participants", tob_t12_count,
 
 # KPI row 2 — 4 Monthly KPIs (same structure: value, label, prior month line, delta)
 y_pos2 = Inches(2.3)
-
-add_kpi_box(slide, f"{report_month_label} Enrolled", f"{total_enrolled_month:,}",
-            r90_avg=f"{total_enrolled_month:,}", p90_avg=f"{prior_month_label}: {total_enrolled_prior:,}",
-            delta=total_enrolled_month - total_enrolled_prior,
-            delta_label="vs prior month",
             left=x_start, top=y_pos2, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, f"{report_month_label} Members", f"{current_members:,}",
