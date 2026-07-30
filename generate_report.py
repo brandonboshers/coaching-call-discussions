@@ -605,11 +605,6 @@ tob_t12_count = tob_t12.get('Tobacco Participants', '0')
 tob_r90 = safe_int(tob_current_count)
 tob_p90 = safe_int(tob_prior.get('Tobacco Participants', 0))
 
-add_kpi_box(slide, "L12M Total Enrolled", f"{total_enrolled_t12:,}",
-            r90_avg=f"90d Avg: {enrolled_r90_avg:,}", p90_avg=f"Prior 90d: {enrolled_p90_avg:,}",
-            delta=enrolled_r90_avg - enrolled_p90_avg,
-            delta_label="vs prior 90d",
-            left=x_start, top=y_pos, width=kpi_width, height=Inches(1.2))
 
 add_kpi_box(slide, "L12M Members Coached", f"{t12_members:,}",
             r90_avg=f"90d Avg: {r90_avg_members:,}", p90_avg=f"Prior 90d: {p90_avg_members:,}",

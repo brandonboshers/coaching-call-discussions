@@ -172,7 +172,6 @@ Goals come from the coaching platform's formal goal system (`SCP.AH_MEMBER_ACTIO
 
 | Status | ActionStatus_ID | Meaning |
 |--------|-----------------|---------|
-| Not Started | 1 | Goal was set but member hasn't begun working on it |
 | In Progress | 2 | Goal is active and being worked on |
 | Completed | 3, 5 | Goal was achieved |
 | Withdrawn | 4 | Member refused or goal was abandoned |
@@ -252,24 +251,24 @@ The original report spec references Achievement/Habit/Learning as goal types. Th
 
 ### Output 4: Goal Domain & Status
 
-| Goal Domain | Not Started | % | In Progress | % | Completed | % | Withdrawn | % |
-|-------------|-------------|---|-------------|---|-----------|---|-----------|---|
+| Goal Domain | In Progress | % | Completed | % | Withdrawn | % |
+|-------------|-------------|---|-----------|---|-----------|---|
 | Gaps in Care | ... | ... | ... | ... | ... | ... | ... | ... |
 | Exercise | ... | ... | ... | ... | ... | ... | ... | ... |
 
 ### Output 5: Goal Number & Status
 
-| Goal Number | Not Started | % | In Progress | % | Completed | % | Withdrawn | % |
-|-------------|-------------|---|-------------|---|-----------|---|-----------|---|
+| Goal Number | In Progress | % | Completed | % | Withdrawn | % |
+|-------------|-------------|---|-----------|---|-----------|---|
 | 1 | ... | ... | ... | ... | ... | ... | ... | ... |
 | 2 | ... | ... | ... | ... | ... | ... | ... | ... |
 
 ### Output 6: Goal Type & Status
 
-| Goal Type | Not Started | % | In Progress | % | Completed | % | Withdrawn | % |
-|-----------|-------------|---|-------------|---|-----------|---|-----------|---|
-| Coach-Created | ... | ... | ... | ... | ... | ... | ... | ... |
-| System-Recommended | ... | ... | ... | ... | ... | ... | ... | ... |
+| Goal Type | In Progress | % | Completed | % | Withdrawn | % |
+|-----------|-------------|---|-----------|---|-----------|---|
+| Coach-Created | ... | ... | ... | ... | ... | ... |
+| System-Recommended | ... | ... | ... | ... | ... | ... |
 
 ---
 
@@ -328,7 +327,7 @@ Output: `coaching_call_discussions.xlsx` (or `coaching_call_discussions_HP_SCCar
 Run the entire `coaching_call_topics_goals.sql` file in a Vertica session. Add filters to the `CALLS_ONE_PER_DAY` subquery:
 ```sql
     WHERE UPPER(MC.CALL_STATUS) = 'SUCCESSFUL'
-      AND UPPER(MC.DIRECTION) = 'OUTBOUND'
+      AND UPPER(MC.DIRECTION) IN ('OUTBOUND','INBOUND')
       AND MC.CUSTOMERID = 'ER_SHBP'                        -- customer filter
       AND TRUNC(MC.ENCOUNTERDATETIME)::DATE >= '2024-01-01' -- date filter
 ```
@@ -404,7 +403,8 @@ launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.sharecare.ETL_Monthly_
 |-------|--------|--------|
 | Multi-topic calls deduped to one | 38% of calls have 2+ topics. Report shows one per call. | Accepted: report spec requires one per call. Most-frequent-topic tiebreak used. |
 | Goal Type (Achievement/Habit/Learning) | Not available platform-wide | Accepted: Coach-Created/System-Recommended used as alternative |
-| Not Started goals dominate volume | 5.6M "Not Started" vs 67K "In Progress" | Monitor: may need to exclude or separate in output |
+| Not Started goals excluded | System-recommended goals in Not Started status are excluded — they represent unactivated goal library items, not coaching activity | Accepted: only In Progress, Completed, Withdrawn shown |
+| Inbound calls included | Both outbound (coach-initiated) and inbound (member-initiated) coaching calls are counted | Accepted: both represent coaching discussions |
 | ActionStatus_ID 5 mapped to Completed | 211K rows with close dates, same behavior as status 3 | Accepted: both represent achieved goals |
 
 ---
