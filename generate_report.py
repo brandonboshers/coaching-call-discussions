@@ -111,7 +111,7 @@ def query_engagement(conn, start, end):
             ROUND(COUNT(DISTINCT T.CURRENTGUID) * 100.0
                 / NULLIFZERO(TOTALS.TOTAL_MEMBERS), 1) AS PCT_OF_MEMBERS,
             COUNT(DISTINCT CASE WHEN G.GOAL_STATUS = 'Completed' THEN G.MEMBERACTION_ID END) AS COMPLETED_GOALS,
-            COUNT(DISTINCT CASE WHEN G.GOAL_STATUS IN ('In Progress','Not Started') THEN G.MEMBERACTION_ID END) AS OPEN_GOALS
+            COUNT(DISTINCT CASE WHEN G.GOAL_STATUS = 'In Progress' THEN G.MEMBERACTION_ID END) AS OPEN_GOALS
         FROM Carefirst_Sandbox.COACHING_CALL_TOPICS T
         CROSS JOIN (
             SELECT COUNT(DISTINCT CURRENTGUID) AS TOTAL_MEMBERS
@@ -133,7 +133,7 @@ def query_goal_dist(conn, start, end):
             ROUND(COUNT(*) * 100.0 / NULLIFZERO(SUM(COUNT(*)) OVER()), 1) AS GOAL_PCT
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
         JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
-        WHERE G.GOAL_STATUS IN ('Completed','In Progress','Not Started','Withdrawn')
+        WHERE G.GOAL_STATUS IN ('Completed','In Progress','Withdrawn')
           AND {build_filter('T', start=start, end=end)}
         GROUP BY 1
         ORDER BY CASE G.GOAL_STATUS
@@ -177,7 +177,7 @@ def query_tobacco(conn, start, end):
         JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON TB.CURRENTGUID = T.CURRENTGUID
         JOIN Carefirst_Sandbox.COACHING_CALL_GOALS G
             ON TB.CURRENTGUID = G.CURRENTGUID AND G.GOAL_DOMAIN = 'Tobacco Cessation'
-            AND G.GOAL_STATUS IN ('In Progress','Not Started')
+            AND G.GOAL_STATUS = 'In Progress'
         WHERE {build_filter('T', start=start, end=end)}
         UNION ALL
         SELECT 'Goals Completed', COUNT(*)::VARCHAR
@@ -198,7 +198,7 @@ def query_tobacco(conn, start, end):
         FROM Carefirst_Sandbox.COACHING_CALL_GOALS G
         JOIN Carefirst_Sandbox.COACHING_CALL_TOPICS T ON G.CURRENTGUID = T.CURRENTGUID
         WHERE G.GOAL_DOMAIN = 'Tobacco Cessation'
-          AND G.GOAL_STATUS IN ('Completed','In Progress','Not Started')
+          AND G.GOAL_STATUS IN ('Completed','In Progress')
           AND {build_filter('T', start=start, end=end)}
     """, conn)
 
@@ -644,7 +644,7 @@ add_kpi_box(slide, f"{report_month_label} Tobacco", tob_current_count,
 add_title(slide, "Goal Status Distribution", Inches(0.4), Inches(3.7))
 
 # Build combined DataFrame — L12M first
-statuses = ['Completed', 'In Progress', 'Not Started', 'Withdrawn']
+statuses = ['Completed', 'In Progress', 'Withdrawn']
 combined_rows = []
 for status in statuses:
     curr_row = df_goal_dist[df_goal_dist['GOAL_STATUS'] == status]

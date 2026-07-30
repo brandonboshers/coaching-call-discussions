@@ -305,7 +305,8 @@ DROP TABLE IF EXISTS COACHING_GOALS;
 CREATE LOCAL TEMP TABLE COACHING_GOALS ON COMMIT PRESERVE ROWS AS
 SELECT
     MA.ACCOUNT,
-    'Coach-Created' AS GOAL_TYPE,
+    CASE WHEN MA.ActionType_ID = 2 THEN 'Coach-Created'
+         WHEN MA.ActionType_ID = 3 THEN 'System-Recommended' END AS GOAL_TYPE,
     CASE
         -- Exercise
         WHEN UPPER(SPLIT_PART(MA.Action_Name,':',1)) IN ('EXERCISE','[EXERCISE]','*EXERCISE','[[*EXERCISE]]','*CIS EXERCISE','*CIS EXERICSE','EXERICSE','EXERISE','EXERCSE') THEN 'Exercise'
@@ -373,7 +374,7 @@ SELECT
         ELSE 'Other'
     END AS GOAL_DOMAIN,
     CASE
-        WHEN MA.ActionStatus_ID = 1 THEN 'Not Started'
+        
         WHEN MA.ActionStatus_ID = 2 THEN 'In Progress'
         WHEN MA.ActionStatus_ID IN (3, 5) THEN 'Completed'
         WHEN MA.ActionStatus_ID = 4 THEN 'Withdrawn'
@@ -383,7 +384,7 @@ SELECT
     MA.MemberAction_ID, MA.ActionType_ID, MA.ActionStatus_ID, MA.FocusArea_ID,
     MA.Action_Date AS GOAL_SET_DATE, MA.Close_Date AS GOAL_CLOSE_DATE
 FROM SCP.AH_MEMBER_ACTION MA
-WHERE MA.ActionType_ID = 2 AND MA.ActionStatus_ID IN (1, 2, 3, 4, 5)
+WHERE MA.ActionType_ID IN (2,3) AND MA.ActionStatus_ID IN (2, 3, 4, 5)
   AND MA.Action_Name NOT LIKE 'Survey:%' AND MA.Action_Name NOT LIKE 'RED:%' AND MA.Action_Name NOT LIKE 'RED/%';
 
 -- =========================================================================
