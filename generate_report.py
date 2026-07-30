@@ -206,7 +206,7 @@ def query_tobacco(conn, start, end):
 with get_connection() as conn:
     # Total enrolled members (L12M) — exclude FEP for CareFirst
     cursor = conn.cursor()
-    fep_filter = ""  # FEP exclusion handled in monthly_refresh.sql for CareFirst
+    fep_filter = "AND CE.CURRENTGUID NOT IN (SELECT DISTINCT CURRENTGUID FROM ENT_WH.ELIGMEMBER WHERE UPPER(ORGUNITID) ILIKE '%%FEP%%' AND UPPER(CUSTOMERID) = UPPER('" + customer_id + "'))" if 'CAREFIRST' in customer_id.upper() else ""
 
     cursor.execute(f"""
         SELECT COUNT(DISTINCT CE.CURRENTGUID)
