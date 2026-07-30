@@ -569,7 +569,7 @@ add_title(slide, "Executive Summary", Inches(0.4), Inches(0.2), size=16)
 # Subtitle
 tb = slide.shapes.add_textbox(Inches(0.4), Inches(0.55), Inches(8), Inches(0.3))
 p = tb.text_frame.paragraphs[0]
-p.text = f"Last 12 Months ({t12_start[:4]})  |  Monthly Detail: {report_month_label} vs {prior_month_label}"
+p.text = f"Last 12 Months ({t12_start} to {t12_end})  |  Monthly Detail: {report_month_label} vs {prior_month_label}"
 p.font.name = FONT_BODY
 p.font.size = Pt(10)
 p.font.color.rgb = COLOR_MUTED
