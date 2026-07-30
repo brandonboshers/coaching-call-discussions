@@ -562,6 +562,17 @@ p4.font.name = FONT_BODY
 p4.font.size = Pt(9)
 p4.font.color.rgb = COLOR_MUTED
 
+# Disclaimer
+tb_disc = slide.shapes.add_textbox(Inches(0.75), Inches(3.0), Inches(9), Inches(0.6))
+tf_disc = tb_disc.text_frame
+tf_disc.word_wrap = True
+p_disc = tf_disc.paragraphs[0]
+p_disc.text = "This is a custom analytics report prepared for internal review. Methodology, population definitions, and metrics may differ from standard recurring reports delivered to the client. This report should not be used to reconcile against contractual or operational reporting without consulting the Client Reporting Services team."
+p_disc.font.name = FONT_BODY
+p_disc.font.size = Pt(8)
+p_disc.font.italic = True
+p_disc.font.color.rgb = COLOR_MUTED
+
 # ===== SLIDE 2: Executive Summary KPIs =====
 slide = prs.slides.add_slide(BLANK)
 add_title(slide, "Executive Summary", Inches(0.4), Inches(0.2), size=16)
@@ -938,7 +949,7 @@ dd_entry(dd2_tf, "Prior 90-Day Average (Prior 90D Avg)", "Same calculation appli
 dd_entry(dd2_tf, "90D Delta (90D Δ)", "The difference between the current 90-Day Average and the Prior 90-Day Average. Indicates whether the metric is trending up or down over a 6-month horizon.")
 
 dd_section(dd2_tf, "Data Sources & Methodology")
-dd_entry(dd2_tf, "Coaching Calls", "ENT_WH.MEMBER_CALL_DATA – successful outbound calls filtered to billable or interaction-eligible call types per ENT_WH.CALLTYPE_XREF_VW. Restricted to calls during active enrollment (LEVEL_NAME = Enrolled) and excludes Engagement call types (outreach/scheduling). One call per member per day (most recent kept).")
+dd_entry(dd2_tf, "Coaching Calls", "ENT_WH.MEMBER_CALL_DATA – successful outbound calls filtered to qualifying call types per ENT_WH.CALLTYPE_XREF_VW. Restricted to calls during active enrollment (LEVEL_NAME = Enrolled) and excludes Engagement call types (outreach/scheduling). One call per member per day (most recent kept).")
 dd_entry(dd2_tf, "Discussion Topics", "ENT_WH.COACH_NOTES_WORKFLOW (questions 502533, 502758 for topic selection; 502534, 502833 for goal/detail text) and ENT_WH.COACH_NOTES_WORKFLOW_DM (questions 502599, 502616 for disease management).")
 dd_entry(dd2_tf, "Goals", "SCP.AH_MEMBER_ACTION – ActionType 2 (Coach-Created) and ActionType 3 (System-Recommended). Status reflects the current snapshot as of the data refresh date, not historical progression.")
 dd_entry(dd2_tf, "Member Identity", "All member counts use CURRENTGUID as the canonical identifier to correctly handle GUID shifts. GUID resolution performed via ENT_WH.ELIGMEMBER.")
